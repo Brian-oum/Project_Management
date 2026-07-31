@@ -1,0 +1,73 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}New Client - Sphere{% endblock %}
+{% block content %}
+<h3 class="mb-4">Register New Client</h3>
+
+<div class="card sphere-card shadow-sm">
+  <div class="card-body p-4">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Client Name</label>
+          {{ form.client_name }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Company Name</label>
+          {{ form.company_name }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Phone Number</label>
+          {{ form.phone_number }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Email Address</label>
+          {{ form.email }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Client Type</label>
+          {{ form.client_type }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Business Registration Number</label>
+          {{ form.business_registration_number }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Industry</label>
+          {{ form.industry }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Referral Source</label>
+          {{ form.referral_source }}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Physical Address</label>
+        {{ form.physical_address }}
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">Assigned Sales Representative</label>
+        {{ form.assigned_sales_rep }}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Client</button>
+      <a href="{% url 'sphere_client_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

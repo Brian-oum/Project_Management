@@ -1,0 +1,86 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Dashboard - Sphere{% endblock %}
+{% block content %}
+<h3 class="mb-4">Dashboard</h3>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card sphere-stat-card shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Total Clients</div>
+        <div class="fs-3 fw-bold">{{ total_clients }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card sphere-stat-card shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Total Projects</div>
+        <div class="fs-3 fw-bold">{{ total_projects }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card sphere-stat-card shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Leads</div>
+        <div class="fs-3 fw-bold">{{ lead_projects }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card sphere-stat-card shadow-sm">
+      <div class="card-body">
+        <div class="text-muted small">Active Projects</div>
+        <div class="fs-3 fw-bold">{{ active_projects }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex gap-2 mb-4">
+  <a href="{% url 'sphere_client_create' %}" class="btn btn-primary btn-sm">+ New Client</a>
+  <a href="{% url 'sphere_project_create' %}" class="btn btn-outline-primary btn-sm">+ New Project</a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card sphere-card shadow-sm">
+      <div class="card-header bg-white fw-semibold">Recent Projects</div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr><th>Project</th><th>Client</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            {% for project in recent_projects %}
+            <tr>
+              <td>{{ project.project_name }}</td>
+              <td>{{ project.client.client_name }}</td>
+              <td><span class="badge sphere-badge-{{ project.status|lower }}">{{ project.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-muted text-center py-3">No projects yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card sphere-card shadow-sm">
+      <div class="card-header bg-white fw-semibold">Recent Clients</div>
+      <ul class="list-group list-group-flush">
+        {% for client in recent_clients %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span>{{ client.client_name }}<br><small class="text-muted">{{ client.client_id }}</small></span>
+          <span class="badge bg-secondary">{{ client.get_client_type_display }}</span>
+        </li>
+        {% empty %}
+        <li class="list-group-item text-muted text-center py-3">No clients yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+:root {
+  --sphere-primary: #2451a6;
+  --sphere-primary-dark: #16305e;
+}
+
+body {
+  background-color: #f4f6f9;
+}
+
+.sphere-navbar {
+  background: linear-gradient(90deg, var(--sphere-primary-dark), var(--sphere-primary));
+}
+
+.sphere-card {
+  border: none;
+  border-radius: 0.75rem;
+}
+
+.sphere-stat-card {
+  border: none;
+  border-radius: 0.75rem;
+  border-left: 4px solid var(--sphere-primary);
+}
+
+.sphere-alert {
+  border-radius: 0.5rem;
+}
+
+.card-header {
+  border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+.btn-primary {
+  background-color: var(--sphere-primary);
+  border-color: var(--sphere-primary);
+}
+
+.btn-primary:hover {
+  background-color: var(--sphere-primary-dark);
+  border-color: var(--sphere-primary-dark);
+}
+
+.btn-outline-primary {
+  color: var(--sphere-primary);
+  border-color: var(--sphere-primary);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--sphere-primary);
+  border-color: var(--sphere-primary);
+}
+
+/* Status badges */
+.sphere-badge-lead { background-color: #6c757d; }
+.sphere-badge-requirements_gathering { background-color: #0d6efd; }
+.sphere-badge-analysis { background-color: #6610f2; }
+.sphere-badge-recommendation { background-color: #6f42c1; }
+.sphere-badge-estimation { background-color: #fd7e14; color: #212529; }
+.sphere-badge-technical_review { background-color: #20c997; }
+.sphere-badge-proposal_sent { background-color: #0dcaf0; color: #212529; }
+.sphere-badge-client_review { background-color: #ffc107; color: #212529; }
+.sphere-badge-approved { background-color: #198754; }
+.sphere-badge-rejected { background-color: #dc3545; }
+.sphere-badge-awaiting_payment { background-color: #d63384; }
+
+.sphere-badge-lead, .sphere-badge-requirements_gathering, .sphere-badge-analysis,
+.sphere-badge-recommendation, .sphere-badge-technical_review, .sphere-badge-approved,
+.sphere-badge-rejected, .sphere-badge-awaiting_payment {
+  color: #fff;
+}
+
+.sphere-badge-lead, .sphere-badge-requirements_gathering, .sphere-badge-analysis,
+.sphere-badge-recommendation, .sphere-badge-technical_review, .sphere-badge-approved,
+.sphere-badge-rejected, .sphere-badge-awaiting_payment,
+.sphere-badge-estimation, .sphere-badge-proposal_sent, .sphere-badge-client_review,
+.sphere-badge-awaiting_payment {
+  padding: 0.35em 0.65em;
+  border-radius: 0.375rem;
+  font-weight: 500;
+}
