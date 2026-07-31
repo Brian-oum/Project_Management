@@ -1,0 +1,39 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Projects - Sphere{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0">Projects</h3>
+  <a href="{% url 'sphere_project_create' %}" class="btn btn-primary btn-sm">+ New Project</a>
+</div>
+
+<div class="card sphere-card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Project</th>
+          <th>Client</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Project Manager</th>
+          <th>Target Completion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+        <tr>
+          <td>{{ project.project_name }}</td>
+          <td>{{ project.client.client_name }}</td>
+          <td>{{ project.get_project_category_display|default:"—" }}</td>
+          <td><span class="badge sphere-badge-{{ project.status|lower }}">{{ project.get_status_display }}</span></td>
+          <td>{{ project.project_manager.get_full_name|default:project.project_manager.username|default:"—" }}</td>
+          <td>{{ project.preferred_completion_date|date:"M d, Y"|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-muted text-center py-4">No projects yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

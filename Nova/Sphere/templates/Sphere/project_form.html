@@ -1,0 +1,84 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}New Project - Sphere{% endblock %}
+{% block content %}
+<h3 class="mb-4">Create New Project</h3>
+
+<div class="card sphere-card shadow-sm">
+  <div class="card-body p-4">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Client</label>
+          {{ form.client }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Project Name</label>
+          {{ form.project_name }}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Project Description</label>
+        {{ form.project_description }}
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Project Category</label>
+          {{ form.project_category }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Status</label>
+          {{ form.status }}
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Business Objectives</label>
+        {{ form.business_objectives }}
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Target Users</label>
+          {{ form.target_users }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Expected Number of Users</label>
+          {{ form.expected_number_of_users }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Preferred Completion Date</label>
+          {{ form.preferred_completion_date }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Budget Range</label>
+          {{ form.budget_range }}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Existing System (if any)</label>
+          {{ form.existing_system }}
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Project Manager</label>
+          {{ form.project_manager }}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Project</button>
+      <a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

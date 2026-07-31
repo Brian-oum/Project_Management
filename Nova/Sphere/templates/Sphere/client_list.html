@@ -1,0 +1,41 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Clients - Sphere{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0">Clients</h3>
+  <a href="{% url 'sphere_client_create' %}" class="btn btn-primary btn-sm">+ New Client</a>
+</div>
+
+<div class="card sphere-card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Client ID</th>
+          <th>Name</th>
+          <th>Company</th>
+          <th>Type</th>
+          <th>Phone</th>
+          <th>Email</th>
+          <th>Sales Rep</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in clients %}
+        <tr>
+          <td><span class="badge bg-light text-dark">{{ client.client_id }}</span></td>
+          <td>{{ client.client_name }}</td>
+          <td>{{ client.company_name|default:"—" }}</td>
+          <td>{{ client.get_client_type_display }}</td>
+          <td>{{ client.phone_number }}</td>
+          <td>{{ client.email }}</td>
+          <td>{{ client.assigned_sales_rep.get_full_name|default:client.assigned_sales_rep.username|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-muted text-center py-4">No clients registered yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
