@@ -17,4 +17,5 @@ urlpatterns = [
     # Projects (Phase 1-2)
     path('projects/', views.project_list_view, name='sphere_project_list'),
     path('projects/new/', views.project_create_view, name='sphere_project_create'),
+    path('projects/new/<int:client_id>/', views.project_create_view, name='sphere_project_create_for_client'),
 ]

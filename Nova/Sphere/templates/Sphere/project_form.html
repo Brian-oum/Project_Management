@@ -5,80 +5,277 @@
 
 <div class="card sphere-card shadow-sm">
   <div class="card-body p-4">
-    <form method="post" novalidate>
+
+    <div class="sphere-step-indicator mb-4">
+      <span class="step-pill active" id="step-pill-1">1. Project Details</span>
+      <span class="step-pill" id="step-pill-2">2. Functional Requirements</span>
+    </div>
+
+    <form method="post" novalidate id="project-form">
       {% csrf_token %}
       {% if form.non_field_errors %}
         <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
       {% endif %}
 
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Client</label>
-          {{ form.client }}
+      <!-- STEP 1: Project Details -->
+      <div id="step-1">
+        {% if preselected_client %}
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+          <div>
+            Creating project for <strong>{{ preselected_client.client_name }}</strong>
+            <span class="badge bg-light text-dark ms-1">{{ preselected_client.client_id }}</span>
+          </div>
+          <a href="{% url 'sphere_client_list' %}" class="small">Not the right client?</a>
         </div>
-        <div class="col-md-6 mb-3">
+        <input type="hidden" name="client" value="{{ preselected_client.pk }}">
+        <div class="mb-3">
           <label class="form-label">Project Name</label>
           {{ form.project_name }}
         </div>
+        {% else %}
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Client</label>
+            {{ form.client }}
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Project Name</label>
+            {{ form.project_name }}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label">Project Description</label>
+          {{ form.project_description }}
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Project Category</label>
+            {{ form.project_category }}
+            <div class="form-text">Determines which functional requirement checklists apply in the next step.</div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Status</label>
+            {{ form.status }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Target Users</label>
+            {{ form.target_users }}
+          </div>
+          <div class="col-md-6 mb-3" id="users-field-wrap">
+            <label class="form-label">Expected Number of Users</label>
+            {{ form.expected_number_of_users }}
+            <div class="form-text" id="users-field-hint">
+              Not applicable to the selected project category — informational sites, networking,
+              cybersecurity, cloud, and API engagements typically don't have a countable user base.
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Preferred Completion Date</label>
+            {{ form.preferred_completion_date }}
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Existing System (if any)</label>
+            {{ form.existing_system }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Project Manager</label>
+            {{ form.project_manager }}
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+          <button type="button" class="btn btn-primary" id="go-to-step-2">Next: Functional Requirements</button>
+        </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">Project Description</label>
-        {{ form.project_description }}
-      </div>
+      <!-- STEP 2: Functional Requirements -->
+      <div id="step-2" style="display:none;">
+        <h5 class="mb-1">Functional Requirements</h5>
+        <p class="text-muted small mb-3">
+          Only the checklists relevant to the selected Project Category are shown below.
+          Common defaults are pre-checked to save time — untick anything that doesn't apply.
+        </p>
+        <div class="row" id="feature-groups">
+          {% for field in form %}
+            {% if "feature__" in field.name %}
+            <div class="col-md-6 mb-3 feature-group" data-group="{{ field.name|cut:'feature__' }}">
+              <label class="form-label fw-semibold">{{ field.label }}</label>
+              <div class="feature-checklist">
+                {% for subwidget in field.subwidgets %}
+                <div class="form-check sphere-feature-check">
+                  <input
+                    type="checkbox"
+                    name="{{ subwidget.data.name }}"
+                    value="{{ subwidget.data.value }}"
+                    id="{{ subwidget.id_for_label }}"
+                    class="form-check-input"
+                    {% if subwidget.data.selected %}checked{% endif %}>
+                  <label class="form-check-label" for="{{ subwidget.id_for_label }}">
+                    {{ subwidget.choice_label }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+          {% endfor %}
+        </div>
 
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Project Category</label>
-          {{ form.project_category }}
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Status</label>
-          {{ form.status }}
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Business Objectives</label>
-        {{ form.business_objectives }}
-      </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Target Users</label>
-          {{ form.target_users }}
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Expected Number of Users</label>
-          {{ form.expected_number_of_users }}
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Preferred Completion Date</label>
-          {{ form.preferred_completion_date }}
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Budget Range</label>
-          {{ form.budget_range }}
+        <div class="d-flex justify-content-between mt-4">
+          <button type="button" class="btn btn-outline-secondary" id="back-to-step-1">Back</button>
+          <button type="submit" class="btn btn-primary">Save Project</button>
         </div>
       </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Existing System (if any)</label>
-          {{ form.existing_system }}
-        </div>
-        <div class="col-md-6 mb-3">
-          <label class="form-label">Project Manager</label>
-          {{ form.project_manager }}
-        </div>
-      </div>
-
-      <button type="submit" class="btn btn-primary">Save Project</button>
-      <a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary">Cancel</a>
     </form>
   </div>
 </div>
+
+{{ category_field_rules_json|json_script:"category-rules-data" }}
+{{ default_field_rule_json|json_script:"default-rule-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var categoryRules = {};
+  var defaultRule = {};
+  try {
+    var categoryRulesEl = document.getElementById('category-rules-data');
+    if (categoryRulesEl) { categoryRules = JSON.parse(categoryRulesEl.textContent) || {}; }
+  } catch (e) {
+    console.warn('Sphere: could not parse category rules JSON', e);
+  }
+  try {
+    var defaultRuleEl = document.getElementById('default-rule-data');
+    if (defaultRuleEl) { defaultRule = JSON.parse(defaultRuleEl.textContent) || {}; }
+  } catch (e) {
+    console.warn('Sphere: could not parse default rule JSON', e);
+  }
+
+  var categorySelect = document.getElementById('id_project_category');
+  var usersWrap = document.getElementById('users-field-wrap');
+  var usersInput = document.getElementById('id_expected_number_of_users');
+  var usersHint = document.getElementById('users-field-hint');
+
+  var step1 = document.getElementById('step-1');
+  var step2 = document.getElementById('step-2');
+  var pill1 = document.getElementById('step-pill-1');
+  var pill2 = document.getElementById('step-pill-2');
+  var goToStep2 = document.getElementById('go-to-step-2');
+  var backToStep1 = document.getElementById('back-to-step-1');
+
+  // Always returns a safe { has_users, feature_groups } shape, even if the
+  // JSON above is missing, malformed, or doesn't have an entry for the
+  // chosen category. feature_groups: null means "show every group" —
+  // the safest fallback, since hiding requirements the PM actually needs
+  // is worse than showing one they don't.
+  function ruleFor(category) {
+    var raw = (category && categoryRules[category]) ? categoryRules[category] : defaultRule;
+    if (!raw || typeof raw !== 'object') { raw = {}; }
+    return {
+      has_users: raw.has_users !== false,
+      feature_groups: Array.isArray(raw.feature_groups) ? raw.feature_groups : null,
+    };
+  }
+
+  function applyRules() {
+    if (!categorySelect) { return; }
+    var rule = ruleFor(categorySelect.value);
+
+    // Expected Number of Users
+    if (usersWrap && usersInput) {
+      if (rule.has_users) {
+        usersWrap.style.display = '';
+        usersInput.disabled = false;
+        if (usersHint) { usersHint.style.display = 'none'; }
+      } else {
+        usersWrap.style.display = 'none';
+        usersInput.value = '';
+        usersInput.disabled = true; // disabled fields are never submitted
+      }
+    }
+
+    // Functional requirement groups — only checklists relevant to the
+    // chosen category are shown; irrelevant ones are hidden and disabled
+    // (and their checkboxes cleared) so nothing stray gets submitted.
+    // If we don't have a usable group list, show everything rather than
+    // guessing wrong or throwing.
+    document.querySelectorAll('.feature-group').forEach(function (el) {
+      var applies = rule.feature_groups === null
+        ? true
+        : rule.feature_groups.indexOf(el.dataset.group) !== -1;
+      el.style.display = applies ? '' : 'none';
+      el.querySelectorAll('input').forEach(function (input) {
+        if (!applies) { input.checked = false; }
+        input.disabled = !applies;
+      });
+    });
+  }
+
+  if (categorySelect) {
+    categorySelect.addEventListener('change', applyRules);
+    applyRules(); // run once on load so editing an existing project starts correct
+  } else {
+    console.warn('Sphere: #id_project_category not found — category-based show/hide is disabled.');
+  }
+
+  // Two-step flow: details first, functional requirements second. The
+  // requirements step depends on Project Category, but a missing category
+  // should never trap the PM on step 1 — fall back to showing every
+  // checklist (via defaultRule in applyRules) and just nudge them to pick
+  // one, instead of silently refusing to advance.
+  if (goToStep2 && step1 && step2) {
+    goToStep2.addEventListener('click', function () {
+      var categoryHint = document.getElementById('category-step-hint');
+      if (categorySelect && !categorySelect.value) {
+        if (!categoryHint) {
+          categoryHint = document.createElement('div');
+          categoryHint.id = 'category-step-hint';
+          categoryHint.className = 'text-warning small mt-1';
+          categoryHint.textContent = 'Tip: pick a Project Category so only the relevant requirement checklists show up.';
+          categorySelect.insertAdjacentElement('afterend', categoryHint);
+        }
+      } else if (categoryHint) {
+        categoryHint.remove();
+      }
+
+      try {
+        applyRules();
+      } catch (e) {
+        console.warn('Sphere: applyRules failed, proceeding to step 2 anyway', e);
+      }
+      step1.style.display = 'none';
+      step2.style.display = '';
+      if (pill1) { pill1.classList.remove('active'); }
+      if (pill2) { pill2.classList.add('active'); }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  } else {
+    console.warn('Sphere: step-toggle elements missing — Next/Back buttons are inactive.', {
+      goToStep2: !!goToStep2, step1: !!step1, step2: !!step2
+    });
+  }
+
+  if (backToStep1 && step1 && step2) {
+    backToStep1.addEventListener('click', function () {
+      step2.style.display = 'none';
+      step1.style.display = '';
+      if (pill2) { pill2.classList.remove('active'); }
+      if (pill1) { pill1.classList.add('active'); }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+});
+</script>
 {% endblock %}

@@ -27,7 +27,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
+AUTHENTICATION_BACKENDS = [
+    'Sphere.backends.EmailAuthBackend',           # your PM login (email + password)
+    'django.contrib.auth.backends.ModelBackend',  # keeps /admin/ (username) working
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -121,3 +124,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+LOGIN_URL = 'sphere_login'
+LOGIN_REDIRECT_URL = 'sphere_dashboard'
+LOGOUT_REDIRECT_URL = 'sphere_login'

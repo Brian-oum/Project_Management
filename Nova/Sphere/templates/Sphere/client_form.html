@@ -1,5 +1,17 @@
 {% extends 'Sphere/base.html' %}
 {% block title %}New Client - Sphere{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  #clientMap {
+    height: 380px;
+    border-radius: 0.5rem;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 <h3 class="mb-4">Register New Client</h3>
 
@@ -55,19 +67,174 @@
         </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">Physical Address</label>
-        {{ form.physical_address }}
+      <hr class="my-4">
+
+      <label class="form-label d-block">
+        Business Location <span class="text-muted fw-normal">(optional)</span>
+      </label>
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <button type="button" class="btn btn-outline-primary btn-sm"
+                data-bs-toggle="modal" data-bs-target="#locationModal">
+          📍 Pick Location on Map
+        </button>
+        <span id="locationStatus" class="text-muted small">No location set.</span>
+        <button type="button" id="clearLocationBtn" class="btn btn-link btn-sm text-danger p-0"
+                style="display:none;">Remove</button>
       </div>
 
-      <div class="mb-4">
-        <label class="form-label">Assigned Sales Representative</label>
-        {{ form.assigned_sales_rep }}
+      <div class="mb-4" id="locationAddressWrap" style="display:none;">
+        <label class="form-label">Location Address / Landmark (optional)</label>
+        {{ form.location_address }}
       </div>
 
-      <button type="submit" class="btn btn-primary">Save Client</button>
+      {{ form.latitude }}
+      {{ form.longitude }}
+
+      <button type="submit" class="btn btn-primary">Save Client &amp; Continue to Project</button>
       <a href="{% url 'sphere_client_list' %}" class="btn btn-outline-secondary">Cancel</a>
     </form>
   </div>
 </div>
+
+<!-- Location picker modal -->
+<div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="locationModalLabel">Pick Client Location</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-2">
+          Click anywhere on the map to drop a pin, or drag it to fine-tune.
+        </p>
+        <div id="clientMap"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="locateMeBtn" class="btn btn-outline-secondary btn-sm me-auto">
+          📍 Use my current location
+        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="confirmLocationBtn" class="btn btn-primary" disabled>Use this Location</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+  const modalEl = document.getElementById('locationModal');
+  const latInput = document.getElementById('{{ form.latitude.id_for_label }}');
+  const lngInput = document.getElementById('{{ form.longitude.id_for_label }}');
+  const statusText = document.getElementById('locationStatus');
+  const clearBtn = document.getElementById('clearLocationBtn');
+  const addressWrap = document.getElementById('locationAddressWrap');
+  const confirmBtn = document.getElementById('confirmLocationBtn');
+  const locateBtn = document.getElementById('locateMeBtn');
+
+  const DEFAULT_LAT = -1.2921; // Nairobi
+  const DEFAULT_LNG = 36.8219;
+
+  let map, marker;
+  let pendingLat = null, pendingLng = null;
+
+  function initMap() {
+    if (map) {
+      map.invalidateSize();
+      return;
+    }
+    const startLat = parseFloat(latInput.value) || DEFAULT_LAT;
+    const startLng = parseFloat(lngInput.value) || DEFAULT_LNG;
+
+    map = L.map('clientMap').setView([startLat, startLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    if (latInput.value && lngInput.value) {
+      setMarker(parseFloat(latInput.value), parseFloat(lngInput.value));
+    }
+
+    map.on('click', function (e) {
+      setMarker(e.latlng.lat, e.latlng.lng);
+    });
+  }
+
+  function setMarker(lat, lng) {
+    if (marker) {
+      marker.setLatLng([lat, lng]);
+    } else {
+      marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+      marker.on('dragend', function () {
+        const pos = marker.getLatLng();
+        pendingLat = pos.lat;
+        pendingLng = pos.lng;
+      });
+    }
+    pendingLat = lat;
+    pendingLng = lng;
+    confirmBtn.disabled = false;
+  }
+
+  modalEl.addEventListener('shown.bs.modal', initMap);
+
+  confirmBtn.addEventListener('click', function () {
+    if (pendingLat === null || pendingLng === null) return;
+    latInput.value = pendingLat.toFixed(6);
+    lngInput.value = pendingLng.toFixed(6);
+    statusText.textContent = 'Location set: ' + pendingLat.toFixed(4) + ', ' + pendingLng.toFixed(4);
+    clearBtn.style.display = 'inline-block';
+    addressWrap.style.display = 'block';
+    bootstrap.Modal.getInstance(modalEl).hide();
+  });
+
+  clearBtn.addEventListener('click', function () {
+    latInput.value = '';
+    lngInput.value = '';
+    pendingLat = null;
+    pendingLng = null;
+    statusText.textContent = 'No location set.';
+    clearBtn.style.display = 'none';
+    addressWrap.style.display = 'none';
+    if (marker && map) {
+      map.removeLayer(marker);
+      marker = null;
+    }
+    confirmBtn.disabled = true;
+  });
+
+  if (locateBtn) {
+    locateBtn.addEventListener('click', function () {
+      if (!navigator.geolocation) return;
+      locateBtn.disabled = true;
+      locateBtn.textContent = 'Locating…';
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          const lat = pos.coords.latitude, lng = pos.coords.longitude;
+          map.setView([lat, lng], 16);
+          setMarker(lat, lng);
+          locateBtn.disabled = false;
+          locateBtn.textContent = '📍 Use my current location';
+        },
+        function () {
+          locateBtn.disabled = false;
+          locateBtn.textContent = '📍 Use my current location';
+        }
+      );
+    });
+  }
+
+  // Re-render state (e.g. after a failed submit) if a location was already set
+  if (latInput.value && lngInput.value) {
+    statusText.textContent = 'Location set: ' + parseFloat(latInput.value).toFixed(4) + ', ' + parseFloat(lngInput.value).toFixed(4);
+    clearBtn.style.display = 'inline-block';
+    addressWrap.style.display = 'block';
+  }
+})();
+</script>
 {% endblock %}
