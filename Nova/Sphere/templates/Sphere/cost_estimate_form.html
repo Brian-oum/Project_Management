@@ -1,0 +1,116 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Estimate Cost - Sphere{% endblock %}
+{% block content %}
+<h3 class="mb-1">Project Estimation</h3>
+<p class="text-muted mb-4">
+  Cost Components for <strong>{{ project.project_name }}</strong>
+  <span class="badge bg-light text-dark ms-1">{{ project.client.client_id }}</span>
+</p>
+
+<div class="card sphere-card shadow-sm">
+  <div class="card-body p-4">
+    <form method="post" novalidate id="estimate-form">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="row">
+        {% for field in form %}
+        <div class="col-md-6 mb-3">
+          <label class="form-label">{{ field.label }}</label>
+          <div class="input-group">
+            <span class="input-group-text">KES</span>
+            {{ field }}
+          </div>
+          {% if field.errors %}
+            <div class="text-danger small">{{ field.errors|join:", " }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <hr class="my-4">
+
+      {% if development_included_requirements %}
+      <div class="mb-3">
+        <span class="fw-semibold small text-muted text-uppercase">Covered by Total Development Cost</span>
+        <div class="border rounded p-2 small mt-1">
+          {% for group_label, items in development_included_requirements.items %}
+          <div class="mb-1">
+            <span class="text-muted">{{ group_label }}:</span> {{ items|join:", " }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">Functional Requirements Cost</span>
+          <span class="fw-semibold">KES {{ project.functional_requirements_cost|floatformat:2 }}</span>
+        </div>
+        <div class="form-text mb-2">
+          Priced automatically from the features selected in Requirements Gathering — independent
+          of Total Development Cost. To change it, update the project's Functional Requirements.
+        </div>
+        {% if project.functional_requirements_cost_breakdown %}
+        <div class="border rounded p-2 small">
+          {% for group_label, items in project.functional_requirements_cost_breakdown %}
+          <div class="mb-1">
+            <span class="text-muted">{{ group_label }}:</span>
+            {% for choice_label, cost in items %}{{ choice_label }} (KES {{ cost|floatformat:2 }}){% if not forloop.last %}, {% endif %}{% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <hr class="my-4">
+
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <span class="text-muted">Estimated Total</span>
+          <div class="fs-4 fw-semibold" id="estimate-total">KES 0.00</div>
+        </div>
+        <div>
+          <a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+          <button type="submit" class="btn btn-primary">Save Cost Estimate &amp; Continue to Review</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById('estimate-form');
+  var totalEl = document.getElementById('estimate-total');
+  var inputs = form.querySelectorAll('input[type="number"]');
+  // Functional Requirements Cost isn't one of the number inputs on this
+  // form (it's computed from Phase 2, not typed in here) — fold it in as
+  // a fixed addend so the live total still matches the saved total.
+  var featureRequirementsCost = {{ feature_requirements_cost|default:0 }};
+
+  function formatKES(n) {
+    return 'KES ' + n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function recalc() {
+    var total = featureRequirementsCost;
+    inputs.forEach(function (input) {
+      var v = parseFloat(input.value);
+      if (!isNaN(v)) { total += v; }
+    });
+    totalEl.textContent = formatKES(total);
+  }
+
+  inputs.forEach(function (input) {
+    input.addEventListener('input', recalc);
+  });
+  recalc();
+})();
+</script>
+{% endblock %}
