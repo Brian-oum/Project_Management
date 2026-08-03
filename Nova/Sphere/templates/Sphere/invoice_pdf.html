@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 2cm; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #222; }
+  h1 { font-size: 20px; margin: 0 0 4px 0; }
+  .muted { color: #777; }
+  .small { font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; }
+  table { width: 100%; border-collapse: collapse; }
+  .header-table td { vertical-align: top; padding-bottom: 16px; border-bottom: 1px solid #ddd; }
+  .cost-table td { padding: 4px 0; }
+  .cost-table td.amount { text-align: right; }
+  .cost-table tr.subtotal td { border-top: 1px solid #999; font-weight: bold; padding-top: 8px; }
+  .cost-table tr.total td { border-top: 1px solid #222; font-weight: bold; font-size: 14px; padding-top: 8px; }
+  .cost-table tr.balance td { color: #1a7f37; font-weight: bold; font-size: 14px; }
+  .indent { padding-left: 16px; }
+  .indent2 { padding-left: 28px; }
+  .section-label { text-transform: uppercase; color: #777; font-size: 9px; padding-top: 12px; }
+</style>
+</head>
+<body>
+
+  <h1>Invoice</h1>
+  <p class="muted">{{ invoice.invoice_number }}</p>
+
+  <table class="header-table">
+    <tr>
+      <td width="25%">
+        <div class="small muted">Client</div>
+        <div>{{ project.client.client_name }} ({{ project.client.client_id }})</div>
+      </td>
+      <td width="25%">
+        <div class="small muted">Project</div>
+        <div>{{ project.project_name }}</div>
+      </td>
+      <td width="25%">
+        <div class="small muted">Invoice Date</div>
+        <div>{{ invoice.invoice_date|date:"M d, Y" }}</div>
+      </td>
+      <td width="25%">
+        <div class="small muted">Due Date</div>
+        <div>{{ invoice.due_date|date:"M d, Y"|default:"—" }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <div class="section-label">Cost Breakdown</div>
+  <table class="cost-table">
+    {% for label, amount in quotation.cost_component_items %}
+    <tr>
+      <td>{{ label }}</td>
+      <td class="amount">KES {{ amount|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+
+    {% if quotation.feature_requirement_groups %}
+    <tr><td colspan="2" class="section-label">Functional Requirements</td></tr>
+    {% for group_label, items in quotation.feature_requirement_groups %}
+    <tr><td colspan="2" class="indent muted">{{ group_label }}</td></tr>
+      {% for feature_label, cost in items %}
+      <tr>
+        <td class="indent2">{{ feature_label }}</td>
+        <td class="amount">KES {{ cost|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    {% endfor %}
+    <tr>
+      <td class="indent"><i>Functional Requirements Subtotal</i></td>
+      <td class="amount"><i>KES {{ quotation.feature_requirements_total|floatformat:2 }}</i></td>
+    </tr>
+    {% endif %}
+
+    <tr class="subtotal">
+      <td>Subtotal</td>
+      <td class="amount">KES {{ quotation.subtotal|floatformat:2 }}</td>
+    </tr>
+    {% if quotation.discount_amount %}
+    <tr>
+      <td>Discount</td>
+      <td class="amount">- KES {{ quotation.discount_amount|floatformat:2 }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td>VAT ({{ quotation.vat_rate|floatformat:2 }}%)</td>
+      <td class="amount">KES {{ quotation.vat_amount|floatformat:2 }}</td>
+    </tr>
+    <tr class="total">
+      <td>Total Due</td>
+      <td class="amount">KES {{ invoice.total_due|floatformat:2 }}</td>
+    </tr>
+  </table>
+
+  {% if payments %}
+  <div class="section-label">Payments Received</div>
+  <table class="cost-table">
+    {% for payment in payments %}
+    <tr>
+      <td>{{ payment.date_paid|date:"M d, Y" }} — {{ payment.get_method_display }}{% if payment.description %} ({{ payment.description }}){% endif %}</td>
+      <td class="amount">KES {{ payment.amount|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+    <tr class="subtotal">
+      <td>Total Paid</td>
+      <td class="amount">KES {{ invoice.amount_paid|floatformat:2 }}</td>
+    </tr>
+  </table>
+  {% endif %}
+
+  <table class="cost-table">
+    <tr class="balance">
+      <td>Outstanding Balance</td>
+      <td class="amount">KES {{ invoice.outstanding_balance|floatformat:2 }}</td>
+    </tr>
+  </table>
+
+  {% if quotation.payment_terms %}
+  <div class="section-label">Payment Terms</div>
+  <p>{{ quotation.payment_terms }}</p>
+  {% endif %}
+
+  <div class="section-label">Accepted Payment Methods</div>
+  <p class="muted">M-Pesa &middot; Bank Transfer &middot; PayPal &middot; Stripe</p>
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Technical Review - Sphere{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-1">
+  <div>
+    <h3 class="mb-1">Technical Review</h3>
+    <p class="text-muted mb-0">
+      {{ project.project_name }}
+      <span class="badge bg-light text-dark ms-1">{{ project.client.client_id }}</span>
+      for {{ project.client.client_name }}
+    </p>
+  </div>
+  {% if estimate.status == 'APPROVED' %}
+    <div class="text-end">
+      <span class="badge bg-success fs-6">Approved</span>
+      <div class="mt-2">
+        <a href="{% url 'sphere_quotation' project.pk %}" class="btn btn-primary btn-sm">
+          Generate Quotation &rarr;
+        </a>
+      </div>
+    </div>
+  {% else %}
+    <span class="badge bg-warning text-dark fs-6">Draft</span>
+  {% endif %}
+</div>
+
+{% if estimate.status == 'APPROVED' %}
+<p class="text-muted small mb-4">
+  Approved by {{ estimate.reviewed_by.get_full_name|default:estimate.reviewed_by.username|default:"—" }}
+  on {{ estimate.approved_at|date:"M d, Y H:i" }}.
+</p>
+{% else %}
+<div class="mb-4"></div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h5 class="mb-3">Cost Components</h5>
+        <form method="post" novalidate id="review-form">
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="row">
+            {% for field in form %}
+              {% if field.name != 'technical_notes' %}
+              <div class="col-md-6 mb-3">
+                <label class="form-label">{{ field.label }}</label>
+                <div class="input-group">
+                  <span class="input-group-text">KES</span>
+                  {{ field }}
+                </div>
+                {% if field.errors %}
+                  <div class="text-danger small">{{ field.errors|join:", " }}</div>
+                {% endif %}
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+
+          <hr class="my-3">
+
+          <div class="mb-3">
+            <label class="form-label">Technical Notes</label>
+            {{ form.technical_notes }}
+            <div class="form-text">Internal only — not included in the client-facing quotation.</div>
+          </div>
+
+          <hr class="my-3">
+
+          {% if development_included_requirements %}
+          <div class="mb-3">
+            <span class="fw-semibold small text-muted text-uppercase">Covered by Total Development Cost</span>
+            <div class="border rounded p-2 small mt-1">
+              {% for group_label, items in development_included_requirements.items %}
+              <div class="mb-1">
+                <span class="text-muted">{{ group_label }}:</span> {{ items|join:", " }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold">Functional Requirements Cost</span>
+              <span class="fw-semibold">KES {{ estimate.feature_requirements_cost|floatformat:2 }}</span>
+            </div>
+            <div class="form-text">
+              Priced automatically from Functional Requirements — independent of Total Development Cost.
+            </div>
+          </div>
+
+          <hr class="my-4">
+
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="text-muted">Recalculated Total</span>
+              <div class="fs-4 fw-semibold" id="review-total">KES {{ estimate.total_cost|floatformat:2 }}</div>
+            </div>
+            <div>
+              <button type="submit" name="action" value="save" class="btn btn-outline-primary me-2">
+                Save Changes
+              </button>
+              <button type="submit" name="action" value="approve" class="btn btn-success">
+                {% if estimate.status == 'APPROVED' %}Re-Approve{% else %}Approve Estimate{% endif %}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h6 class="text-muted mb-3">Requirements Snapshot</h6>
+        {% if feature_list %}
+          {% for group_label, items in feature_list.items %}
+          <div class="mb-2">
+            <div class="fw-semibold small">{{ group_label }}</div>
+            <div class="text-muted small">{{ items|join:", " }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted small mb-0">No functional requirements captured yet.</p>
+        {% endif %}
+        <hr>
+        <a href="{% url 'sphere_project_requirements_output' project.pk %}" class="btn btn-outline-secondary btn-sm w-100">
+          View SRS / Feature List / Scope
+        </a>
+      </div>
+    </div>
+    <a href="{% url 'sphere_project_list' %}" class="btn btn-link">&larr; Back to Projects</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById('review-form');
+  var totalEl = document.getElementById('review-total');
+  var inputs = form.querySelectorAll('input[type="number"]');
+  // Functional Requirements Cost isn't one of the number inputs here
+  // either — it's computed from Phase 2, not edited in Technical Review.
+  var featureRequirementsCost = {{ feature_requirements_cost|default:0 }};
+
+  function formatKES(n) {
+    return 'KES ' + n.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function recalc() {
+    var total = featureRequirementsCost;
+    inputs.forEach(function (input) {
+      var v = parseFloat(input.value);
+      if (!isNaN(v)) { total += v; }
+    });
+    totalEl.textContent = formatKES(total);
+  }
+
+  inputs.forEach(function (input) {
+    input.addEventListener('input', recalc);
+  });
+})();
+</script>
+{% endblock %}

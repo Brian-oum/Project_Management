@@ -17,6 +17,7 @@
           <th>Status</th>
           <th>Project Manager</th>
           <th>Target Completion</th>
+          <th>Estimate</th>
         </tr>
       </thead>
       <tbody>
@@ -28,9 +29,26 @@
           <td><span class="badge sphere-badge-{{ project.status|lower }}">{{ project.get_status_display }}</span></td>
           <td>{{ project.project_manager.get_full_name|default:project.project_manager.username|default:"—" }}</td>
           <td>{{ project.preferred_completion_date|date:"M d, Y"|default:"—" }}</td>
+          <td>
+            {% if project.has_cost_estimate %}
+              {% if project.cost_estimate.status == 'APPROVED' %}
+                <a href="{% url 'sphere_technical_review' project.pk %}" class="badge bg-success text-decoration-none">
+                  Approved — KES {{ project.cost_estimate.total_cost|floatformat:2 }}
+                </a>
+              {% else %}
+                <a href="{% url 'sphere_technical_review' project.pk %}" class="badge bg-warning text-dark text-decoration-none">
+                  Review Draft
+                </a>
+              {% endif %}
+            {% elif project.has_requirements %}
+              <a href="{% url 'sphere_estimate_create' project.pk %}" class="btn btn-outline-primary btn-sm">Estimate Cost</a>
+            {% else %}
+              <span class="text-muted small">Awaiting requirements</span>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
-        <tr><td colspan="6" class="text-muted text-center py-4">No projects yet.</td></tr>
+        <tr><td colspan="7" class="text-muted text-center py-4">No projects yet.</td></tr>
         {% endfor %}
       </tbody>
     </table>

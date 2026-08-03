@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 
-from .models import Client, Project, Profile
+from .models import Client, Project, Profile, CostEstimate, Quotation, Invoice, Payment
 
 
 def _bootstrapify(fields):
@@ -229,3 +229,176 @@ class ProjectForm(forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+class CostEstimateForm(forms.ModelForm):
+    """Phase 3 — Project Estimation. Captures the Cost Components that are
+    actually relevant to the project's category (see
+    Project.CATEGORY_COST_RULES) — e.g. a Networking engagement never sees
+    a Domain & Hosting field. Effort-hour breakdowns and staffing plans
+    are out of scope. The Functional Requirements Cost is priced
+    automatically from Phase 2's selections and isn't a field here — see
+    CostEstimate.sync_feature_requirements_cost(), called from the view."""
+
+    class Meta:
+        model = CostEstimate
+        fields = [field_name for field_name, _label in CostEstimate.COST_FIELDS]
+        widgets = {
+            field_name: forms.NumberInput(attrs={'step': '0.01', 'min': '0'})
+            for field_name, _label in CostEstimate.COST_FIELDS
+        }
+
+    def __init__(self, *args, project=None, **kwargs):
+        self.project = project
+        super().__init__(*args, **kwargs)
+
+        applicable = set(Project.cost_fields_for(project.project_category)) if project \
+            else {field_name for field_name, _label in CostEstimate.COST_FIELDS}
+
+        for field_name, label in CostEstimate.COST_FIELDS:
+            if field_name not in applicable:
+                # Not relevant to this project's category — drop it
+                # entirely rather than rendering a field that always has
+                # to be zero. The model field itself defaults to 0.00.
+                del self.fields[field_name]
+                continue
+            self.fields[field_name].label = label
+            self.fields[field_name].required = False
+        _bootstrapify(self.fields)
+
+
+class TechnicalReviewForm(forms.ModelForm):
+    """Phase 4 — Technical Review. Same category-relevant Cost Components as
+    Phase 3, editable ('Update Cost Components' / 'Recalculate Cost
+    Estimates'), plus Technical Notes. Approval itself is a separate
+    explicit action (see views.py), not a field on this form, so it can
+    never be set by silently posting the form."""
+
+    class Meta:
+        model = CostEstimate
+        fields = [field_name for field_name, _label in CostEstimate.COST_FIELDS] + ['technical_notes']
+        widgets = {
+            **{
+                field_name: forms.NumberInput(attrs={'step': '0.01', 'min': '0'})
+                for field_name, _label in CostEstimate.COST_FIELDS
+            },
+            'technical_notes': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # This form is always bound to an existing CostEstimate (instance=
+        # estimate), so the project — and its category — comes from there
+        # rather than needing to be passed in separately.
+        project = self.instance.project if self.instance and self.instance.pk else None
+        applicable = set(Project.cost_fields_for(project.project_category)) if project \
+            else {field_name for field_name, _label in CostEstimate.COST_FIELDS}
+
+        for field_name, label in CostEstimate.COST_FIELDS:
+            if field_name not in applicable:
+                del self.fields[field_name]
+                continue
+            self.fields[field_name].label = label
+            self.fields[field_name].required = False
+        self.fields['technical_notes'].label = 'Technical Notes'
+        self.fields['technical_notes'].required = False
+        _bootstrapify(self.fields)
+
+
+class QuotationForm(forms.ModelForm):
+    """Phase 5 — Quotation Generation. Editable terms only: the cost line
+    items themselves come straight from the Approved Cost Estimate (Phase
+    3/4) and aren't re-entered here. VAT stands in for the generic 'Taxes'
+    line from the original workflow doc."""
+
+    class Meta:
+        model = Quotation
+        fields = ['vat_rate', 'discount_amount', 'payment_terms', 'valid_until']
+        widgets = {
+            'vat_rate': forms.NumberInput(attrs={'step': '0.01', 'min': '0', 'max': '100'}),
+            'discount_amount': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
+            'payment_terms': forms.Textarea(attrs={'rows': 3, 'placeholder': "e.g. 50% deposit on approval, balance on delivery."}),
+            'valid_until': forms.DateInput(attrs={'type': 'date'}),
+        }
+        labels = {
+            'vat_rate': 'VAT Rate (%)',
+            'discount_amount': 'Discount',
+            'valid_until': 'Quotation Valid Until',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in self.fields:
+            self.fields[field_name].required = False
+        _bootstrapify(self.fields)
+
+
+class InvoiceForm(forms.ModelForm):
+    """Phase 7 — Invoice Generation. The cost breakdown, Discount and VAT
+    come straight from the Approved Quotation and aren't re-entered here.
+    The amount collected isn't set here either — it's the sum of the
+    invoice's individual Payment records (see PaymentForm below); this
+    form only sets the Due Date."""
+
+    class Meta:
+        model = Invoice
+        fields = ['due_date']
+        widgets = {
+            'due_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        labels = {
+            'due_date': 'Due Date',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in self.fields:
+            self.fields[field_name].required = False
+        _bootstrapify(self.fields)
+
+
+class PaymentForm(forms.ModelForm):
+    """Records one payment against an Invoice — amount, date, method, and
+    what it was for (e.g. 'Deposit', 'Milestone 2', 'Final balance'). An
+    invoice can have any number of these; Invoice.amount_paid() totals
+    them and Invoice.sync_status() re-derives the invoice's status
+    whenever one is added or removed (see invoice_view)."""
+
+    class Meta:
+        model = Payment
+        fields = ['amount', 'date_paid', 'method', 'description']
+        widgets = {
+            'amount': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01'}),
+            'date_paid': forms.DateInput(attrs={'type': 'date'}),
+            'description': forms.TextInput(attrs={
+                'placeholder': "What was this for? e.g. Deposit, Milestone 2, Final balance"
+            }),
+        }
+        labels = {
+            'date_paid': 'Date Paid',
+            'method': 'Payment Method',
+            'description': 'What For',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['description'].required = False
+        _bootstrapify(self.fields)
+
+
+class ProjectStatusForm(forms.ModelForm):
+    """Lets a PM manually set a project's status directly — to correct a
+    mistaken automatic transition, or move it along a step (e.g.
+    Lead -> Requirements Gathering) that isn't otherwise driven by a form
+    submission elsewhere in the workflow. Intentionally just the one
+    field: everything else about the project is edited through its own
+    phase-specific form."""
+
+    class Meta:
+        model = Project
+        fields = ['status']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _bootstrapify(self.fields)

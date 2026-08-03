@@ -1,0 +1,279 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Invoice - {{ project.project_name }} - Sphere{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-1 no-print">
+  <div>
+    <h3 class="mb-1">Invoice</h3>
+    <p class="text-muted mb-0">
+      {{ invoice.invoice_number }} — {{ project.project_name }}
+      <span class="badge bg-light text-dark ms-1">{{ project.client.client_id }}</span>
+      for {{ project.client.client_name }}
+    </p>
+  </div>
+  <div class="text-end">
+    <span class="badge sphere-badge-{{ invoice.status|lower }} fs-6">{{ invoice.get_status_display }}</span>
+    <div class="mt-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">Print</button>
+      <a href="{% url 'sphere_invoice_pdf' project.pk %}" class="btn btn-primary btn-sm">Download PDF</a>
+    </div>
+  </div>
+</div>
+
+{% if invoice.status == invoice.STATUS_PAID %}
+<p class="text-muted small mb-4 no-print">This invoice has been paid in full.</p>
+{% else %}
+<div class="mb-4"></div>
+{% endif %}
+
+<div class="row">
+  <div class="col-lg-8">
+
+    <!-- Printable invoice document -->
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between flex-wrap mb-4 pb-3 border-bottom">
+          <div>
+            <div class="text-muted small text-uppercase">Invoice Number</div>
+            <div class="fw-semibold">{{ invoice.invoice_number }}</div>
+          </div>
+          <div>
+            <div class="text-muted small text-uppercase">Client</div>
+            <div class="fw-semibold">{{ project.client.client_name }} <span class="text-muted">({{ project.client.client_id }})</span></div>
+          </div>
+          <div>
+            <div class="text-muted small text-uppercase">Project</div>
+            <div class="fw-semibold">{{ project.project_name }}</div>
+          </div>
+          <div>
+            <div class="text-muted small text-uppercase">Invoice Date</div>
+            <div class="fw-semibold">{{ invoice.invoice_date|date:"M d, Y" }}</div>
+          </div>
+          <div>
+            <div class="text-muted small text-uppercase">Due Date</div>
+            <div class="fw-semibold">{{ invoice.due_date|date:"M d, Y"|default:"—" }}</div>
+          </div>
+        </div>
+
+        <h6 class="text-uppercase text-muted small mb-3">Cost Breakdown</h6>
+        <table class="table table-sm mb-0">
+          <tbody>
+            {% for label, amount in quotation.cost_component_items %}
+            <tr>
+              <td>{{ label }}</td>
+              <td class="text-end">KES {{ amount|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+
+            {% if quotation.feature_requirement_groups %}
+            <tr>
+              <td colspan="2" class="pt-3 pb-1 small fw-semibold text-uppercase text-muted">
+                Functional Requirements
+              </td>
+            </tr>
+            {% for group_label, items in quotation.feature_requirement_groups %}
+            <tr>
+              <td colspan="2" class="ps-2 small text-muted">{{ group_label }}</td>
+            </tr>
+              {% for feature_label, cost in items %}
+              <tr>
+                <td class="ps-4 small">{{ feature_label }}</td>
+                <td class="text-end small">KES {{ cost|floatformat:2 }}</td>
+              </tr>
+              {% endfor %}
+            {% endfor %}
+            <tr>
+              <td class="ps-2 fst-italic">Functional Requirements Subtotal</td>
+              <td class="text-end fst-italic">KES {{ quotation.feature_requirements_total|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+
+            <tr class="border-top">
+              <td class="fw-semibold">Subtotal</td>
+              <td class="text-end fw-semibold">KES {{ quotation.subtotal|floatformat:2 }}</td>
+            </tr>
+            {% if quotation.discount_amount %}
+            <tr>
+              <td>Discount</td>
+              <td class="text-end">- KES {{ quotation.discount_amount|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+              <td>VAT ({{ quotation.vat_rate|floatformat:2 }}%)</td>
+              <td class="text-end">KES {{ quotation.vat_amount|floatformat:2 }}</td>
+            </tr>
+            <tr class="border-top">
+              <td class="fs-5 fw-semibold">Total Due</td>
+              <td class="text-end fs-5 fw-semibold">KES {{ invoice.total_due|floatformat:2 }}</td>
+            </tr>
+            {% if invoice.amount_paid %}
+            <tr>
+              <td>Amount Paid</td>
+              <td class="text-end">- KES {{ invoice.amount_paid|floatformat:2 }}</td>
+            </tr>
+            {% endif %}
+            <tr class="border-top">
+              <td class="fs-5 fw-semibold text-success">Outstanding Balance</td>
+              <td class="text-end fs-5 fw-semibold text-success">KES {{ invoice.outstanding_balance|floatformat:2 }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        {% if quotation.payment_terms %}
+        <div class="mt-4 pt-3 border-top">
+          <h6 class="text-uppercase text-muted small mb-2">Payment Terms</h6>
+          <p class="mb-0">{{ quotation.payment_terms }}</p>
+        </div>
+        {% endif %}
+
+        <div class="mt-4 pt-3 border-top">
+          <h6 class="text-uppercase text-muted small mb-2">Accepted Payment Methods</h6>
+          <p class="mb-0 text-muted small">M-Pesa &middot; Bank Transfer &middot; PayPal &middot; Stripe</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Due date -->
+    <div class="card sphere-card shadow-sm mb-4 no-print">
+      <div class="card-body p-4">
+        <h5 class="mb-3">Invoice Details</h5>
+        <form method="post" novalidate id="invoice-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save">
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="row align-items-end">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.due_date.label }}</label>
+              {{ form.due_date }}
+              {% if form.due_date.errors %}<div class="text-danger small">{{ form.due_date.errors|join:", " }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 mb-3 text-md-end">
+              <button type="submit" class="btn btn-outline-primary">Save Due Date</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Payment history -->
+    <div class="card sphere-card shadow-sm mb-4 no-print">
+      <div class="card-body p-4">
+        <h5 class="mb-3">Payments</h5>
+
+        {% if payments %}
+        <table class="table table-sm align-middle mb-4">
+          <thead>
+            <tr class="text-muted small text-uppercase">
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Method</th>
+              <th>What For</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td>{{ payment.date_paid|date:"M d, Y" }}</td>
+              <td>KES {{ payment.amount|floatformat:2 }}</td>
+              <td>{{ payment.get_method_display }}</td>
+              <td>{{ payment.description|default:"—" }}</td>
+              <td class="text-end">
+                <form method="post" class="d-inline" onsubmit="return confirm('Remove this payment?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_payment">
+                  <input type="hidden" name="payment_id" value="{{ payment.pk }}">
+                  <button type="submit" class="btn btn-link btn-sm text-danger p-0">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted small mb-4">No payments recorded yet.</p>
+        {% endif %}
+
+        <h6 class="mb-3">Record a Payment</h6>
+        <form method="post" novalidate id="payment-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_payment">
+          {% if payment_form.non_field_errors %}
+            <div class="alert alert-danger py-2">{{ payment_form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">{{ payment_form.amount.label }}</label>
+              <div class="input-group">
+                <span class="input-group-text">KES</span>
+                {{ payment_form.amount }}
+              </div>
+              {% if payment_form.amount.errors %}<div class="text-danger small">{{ payment_form.amount.errors|join:", " }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">{{ payment_form.date_paid.label }}</label>
+              {{ payment_form.date_paid }}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">{{ payment_form.method.label }}</label>
+              {{ payment_form.method }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ payment_form.description.label }}</label>
+            {{ payment_form.description }}
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary">Add Payment</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="col-lg-4 no-print">
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h6 class="text-muted mb-3">Invoice Snapshot</h6>
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="text-muted">Total Due</span>
+          <span>KES {{ invoice.total_due|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="text-muted">Amount Paid</span>
+          <span>KES {{ invoice.amount_paid|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-1 fw-semibold">
+          <span>Outstanding Balance</span>
+          <span>KES {{ invoice.outstanding_balance|floatformat:2 }}</span>
+        </div>
+        <hr>
+        <a href="{% url 'sphere_quotation' project.pk %}" class="btn btn-outline-secondary btn-sm w-100">
+          View Quotation
+        </a>
+      </div>
+    </div>
+
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h6 class="text-muted mb-3">Project Status</h6>
+        <form method="post" action="{% url 'sphere_project_status_update' project.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{% url 'sphere_invoice' project.pk %}">
+          <div class="mb-2">
+            {{ status_form.status }}
+          </div>
+          <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Update Status</button>
+        </form>
+      </div>
+    </div>
+    <a href="{% url 'sphere_project_list' %}" class="btn btn-link">&larr; Back to Projects</a>
+  </div>
+</div>
+{% endblock %}

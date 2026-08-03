@@ -1,0 +1,147 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Requirements Output - {{ project.project_name }} - Sphere{% endblock %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start mb-4 no-print">
+  <div>
+    <h3 class="mb-1">Requirements Gathering Output</h3>
+    <p class="text-muted mb-0">{{ project.project_name }} — {{ project.client.client_name }}</p>
+  </div>
+  <div>
+    <button type="button" class="btn btn-outline-secondary me-2" onclick="window.print()">Print</button>
+    <button type="button" class="btn btn-outline-secondary" disabled title="Coming soon">
+      Download Word (coming soon)
+    </button>
+  </div>
+</div>
+
+<div class="card sphere-card shadow-sm mb-4">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between flex-wrap mb-4 pb-3 border-bottom">
+      <div>
+        <div class="text-muted small text-uppercase">SRS Reference</div>
+        <div class="fw-semibold">{{ srs_reference }}</div>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase">Client</div>
+        <div class="fw-semibold">{{ project.client.client_name }} <span class="text-muted">({{ project.client.client_id }})</span></div>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase">Project Category</div>
+        <div class="fw-semibold">{{ project.get_project_category_display|default:"Not yet set" }}</div>
+      </div>
+      <div>
+        <div class="text-muted small text-uppercase">Generated</div>
+        <div class="fw-semibold">{{ generated_at|date:"M d, Y H:i" }}</div>
+      </div>
+    </div>
+
+    <!-- 1. Initial Project Scope -->
+    <section class="mb-5">
+      <h5 class="mb-3">1. Initial Project Scope</h5>
+      {% if initial_scope %}
+        <p class="mb-0">{{ initial_scope }}</p>
+      {% else %}
+        <p class="text-muted mb-0">No scope information captured yet.</p>
+      {% endif %}
+    </section>
+
+    <!-- 2. Feature List -->
+    <section class="mb-5">
+      <h5 class="mb-3">2. Feature List</h5>
+      {% if feature_list %}
+        <div class="row">
+          {% for group_label, choice_labels in feature_list.items %}
+          <div class="col-md-6 mb-3">
+            <div class="fw-semibold mb-1">{{ group_label }}</div>
+            <ul class="mb-0">
+              {% for choice_label in choice_labels %}
+              <li>{{ choice_label }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted mb-0">No functional requirements were selected.</p>
+      {% endif %}
+    </section>
+
+    <!-- 3. Software Requirements Specification -->
+    <section>
+      <h5 class="mb-3">3. Software Requirements Specification (SRS)</h5>
+
+      <div class="mb-4">
+        <h6 class="text-uppercase text-muted small mb-2">3.1 Introduction &amp; Purpose</h6>
+        <p class="mb-0">
+          This document specifies the requirements gathered for
+          <strong>{{ project.project_name }}</strong>, commissioned by
+          <strong>{{ project.client.client_name }}</strong>. It reflects the information captured
+          during the Requirements Gathering phase and serves as the baseline for solution
+          recommendation, estimation, and technical review.
+        </p>
+      </div>
+
+      <div class="mb-4">
+        <h6 class="text-uppercase text-muted small mb-2">3.2 Project Overview</h6>
+        <table class="table table-sm table-borderless mb-0">
+          <tbody>
+            <tr>
+              <th class="text-muted fw-normal" style="width: 240px;">Project Category</th>
+              <td>{{ project.get_project_category_display|default:"Not yet set" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Description</th>
+              <td>{{ project.project_description|default:"—" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Target Users</th>
+              <td>{{ project.target_users|default:"—" }}</td>
+            </tr>
+            {% if project.needs_user_count %}
+            <tr>
+              <th class="text-muted fw-normal">Expected Number of Users</th>
+              <td>{{ project.expected_number_of_users|default:"—" }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+              <th class="text-muted fw-normal">Preferred Completion Date</th>
+              <td>{{ project.preferred_completion_date|date:"M d, Y"|default:"—" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Existing System</th>
+              <td>{{ project.existing_system|default:"None" }}</td>
+            </tr>
+            <tr>
+              <th class="text-muted fw-normal">Project Manager</th>
+              <td>{{ project.project_manager.get_full_name|default:project.project_manager.username|default:"Unassigned" }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mb-4">
+        <h6 class="text-uppercase text-muted small mb-2">3.3 Scope Statement</h6>
+        <p class="mb-0">{{ initial_scope|default:"—" }}</p>
+      </div>
+
+      <div>
+        <h6 class="text-uppercase text-muted small mb-2">3.4 Functional Requirements</h6>
+        {% if feature_list %}
+          {% for group_label, choice_labels in feature_list.items %}
+          <div class="mb-2">
+            <span class="fw-semibold">{{ group_label }}:</span>
+            {{ choice_labels|join:", " }}
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-0">No functional requirements were selected.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+</div>
+
+<a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary no-print">Back to Projects</a>
+
+{% endblock %}

@@ -129,3 +129,15 @@ body {
   border-radius: 0.375rem;
   font-weight: 500;
 }
+/* Requirements output page (SRS / Feature List / Initial Project Scope) — print support */
+@media print {
+  .sphere-navbar,
+  .no-print {
+    display: none !important;
+  }
+
+  .sphere-card {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
