@@ -402,3 +402,24 @@ class ProjectStatusForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _bootstrapify(self.fields)
+
+
+class ProjectCompletionForm(forms.Form):
+    """Final step after Phase 7 — Completed & Handed Over. Deliberately a
+    plain Form, not a ModelForm: completed_at, final_amount, and
+    handed_over_by are all set automatically in Project.mark_completed()
+    rather than typed in here, since they should record what actually
+    happened rather than be freely editable after the fact."""
+
+    completion_notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'placeholder': "e.g. Handed over to Jane at Acme Ltd; walkthrough and training completed.",
+        }),
+        label='Handover Notes',
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        _bootstrapify(self.fields)

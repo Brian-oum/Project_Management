@@ -95,8 +95,8 @@
           </div>
         </div>
 
-        <div class="d-flex justify-content-end mt-4">
-          <a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary me-2">Cancel</a>
+        <div class="sphere-btn-group justify-content-end mt-4">
+          <a href="{% url 'sphere_project_list' %}" class="btn btn-outline-secondary">Cancel</a>
           <button type="button" class="btn btn-primary" id="go-to-step-2">Next: Functional Requirements</button>
         </div>
       </div>
@@ -134,7 +134,7 @@
           {% endfor %}
         </div>
 
-        <div class="d-flex justify-content-between mt-4">
+        <div class="d-flex justify-content-between flex-wrap gap-2 mt-4">
           <button type="button" class="btn btn-outline-secondary" id="back-to-step-1">Back</button>
           <button type="submit" class="btn btn-primary">Save Project</button>
         </div>

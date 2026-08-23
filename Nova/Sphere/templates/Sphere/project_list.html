@@ -1,13 +1,16 @@
 {% extends 'Sphere/base.html' %}
 {% block title %}Projects - Sphere{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h3 class="mb-0">Projects</h3>
+<div class="sphere-page-header mb-4">
+  <div>
+    <h3 class="mb-1">Projects</h3>
+    <p class="text-muted mb-0">Every project across the pipeline, from lead to handover.</p>
+  </div>
   <a href="{% url 'sphere_project_create' %}" class="btn btn-primary btn-sm">+ New Project</a>
 </div>
 
 <div class="card sphere-card shadow-sm">
-  <div class="table-responsive">
+  <div class="table-responsive sphere-table-scroll">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light">
         <tr>
@@ -17,24 +20,56 @@
           <th>Status</th>
           <th>Project Manager</th>
           <th>Target Completion</th>
-          <th>Estimate</th>
+          <th>Price</th>
         </tr>
       </thead>
       <tbody>
         {% for project in projects %}
         <tr>
-          <td>{{ project.project_name }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="sphere-row-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              </span>
+              {{ project.project_name }}
+            </div>
+          </td>
           <td>{{ project.client.client_name }}</td>
           <td>{{ project.get_project_category_display|default:"—" }}</td>
-          <td><span class="badge sphere-badge-{{ project.status|lower }}">{{ project.get_status_display }}</span></td>
+          <td>
+            <form method="post" action="{% url 'sphere_project_status_update' project.pk %}" class="sphere-status-form d-inline-block">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{% url 'sphere_project_list' %}">
+              <select name="status" class="form-select form-select-sm sphere-status-select sphere-badge-{{ project.status|lower }}" onchange="this.form.submit()">
+                {% for value, label in project.STATUS_CHOICES %}
+                <option value="{{ value }}" {% if value == project.status %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            {% if project.status == 'COMPLETED' %}
+            <div class="text-muted small mt-1">
+              KES {{ project.final_amount|floatformat:2 }}{% if project.duration_days %} · {{ project.duration_days }} days{% endif %}
+            </div>
+            {% endif %}
+          </td>
           <td>{{ project.project_manager.get_full_name|default:project.project_manager.username|default:"—" }}</td>
           <td>{{ project.preferred_completion_date|date:"M d, Y"|default:"—" }}</td>
           <td>
-            {% if project.has_cost_estimate %}
+            {% if project.has_quotation %}
+              <a href="{% url 'sphere_quotation' project.pk %}" class="badge sphere-badge-{{ project.quotation.status|lower }} text-decoration-none">
+                {{ project.quotation.get_status_display }}
+              </a>
+              <div class="text-muted small mt-1">
+                KES {{ project.quotation.grand_total|floatformat:2 }}
+              </div>
+            {% elif project.has_cost_estimate %}
               {% if project.cost_estimate.status == 'APPROVED' %}
                 <a href="{% url 'sphere_technical_review' project.pk %}" class="badge bg-success text-decoration-none">
-                  Approved — KES {{ project.cost_estimate.total_cost|floatformat:2 }}
+                  Approved
                 </a>
+                <div class="text-muted small mt-1">
+                  KES {{ project.cost_estimate.total_cost|floatformat:2 }}
+                </div>
               {% else %}
                 <a href="{% url 'sphere_technical_review' project.pk %}" class="badge bg-warning text-dark text-decoration-none">
                   Review Draft

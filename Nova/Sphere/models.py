@@ -117,7 +117,9 @@ class Project(models.Model):
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
         ('AWAITING_PAYMENT', 'Awaiting Initial Payment'),
-        ('PAID', 'Paid'),
+        ('IN_PROGRESS', 'Project In Progress'),
+        ('PAID', 'Paid in Full'),
+        ('COMPLETED', 'Completed & Handed Over'),
     ]
 
     CATEGORY_CHOICES = [
@@ -307,6 +309,38 @@ class Project(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # ------------------------------------------------------------------
+    # Execution & handover (Phase 7 follow-through).
+    #
+    # started_at is set automatically the first time a payment is
+    # recorded (see views._resync_invoice_and_project) — that's when
+    # IN_PROGRESS begins, distinct from AWAITING_PAYMENT before it and
+    # PAID once the final payment lands. Being fully paid isn't the same
+    # as being delivered, though, so COMPLETED is never automatic: a PM
+    # explicitly marks the project Completed & Handed Over (see
+    # mark_completed()), which snapshots final_amount and completion_notes
+    # so they stay a stable historical record even if payments are edited
+    # afterwards.
+    # ------------------------------------------------------------------
+    started_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When project execution began — set automatically on the first recorded payment.'
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    handed_over_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='handed_over_projects',
+        help_text='PM who marked the project Completed & Handed Over.'
+    )
+    completion_notes = models.TextField(
+        blank=True,
+        help_text="e.g. who the project was handed over to, training given, outstanding items."
+    )
+    final_amount = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Total amount actually collected for the project, snapshotted at handover.'
+    )
+
     class Meta:
         ordering = ['-created_at']
 
@@ -342,25 +376,23 @@ class Project(models.Model):
     # ------------------------------------------------------------------
     FEATURE_COSTS = {
         'payment': {
-            'mpesa_stk': Decimal('30000'),
-            'card': Decimal('35000'),
+            'mpesa_stk': Decimal('20000'),
+            'card': Decimal('20000'),
         },
         'communication': {
-            'email': Decimal('8000'),
-            'sms': Decimal('15000'),
-            'push': Decimal('18000'),
+            'email': Decimal('10000'),
+            'sms': Decimal('40000'),
             'whatsapp': Decimal('25000'),
-            'live_chat': Decimal('30000'),
+            'live_chat': Decimal('10000'),
         },
         'integrations': {
             'google_maps': Decimal('12000'),
             'google_analytics': Decimal('8000'),
             'ms365': Decimal('20000'),
-            'quickbooks': Decimal('25000'),
-            'firebase': Decimal('18000'),
+            'quickbooks': Decimal('50000'),
             'openai': Decimal('30000'),
             'twilio': Decimal('20000'),
-            'daraja': Decimal('20000'),
+            'eTIMS': Decimal('20000'),
         },
         'hosting': {
             'shared': Decimal('5000'),
@@ -540,6 +572,42 @@ class Project(models.Model):
     def has_invoice(self):
         """Whether Phase 7 (Invoice Generation) has been started for this project."""
         return self.has_quotation() and hasattr(self.quotation, 'invoice')
+
+    def is_completed(self):
+        return self.status == 'COMPLETED'
+
+    def duration(self):
+        """Elapsed time from when project execution started (the first
+        recorded payment, see started_at) to when it was Completed &
+        Handed Over. Returns None until both endpoints are set — there's
+        no meaningful duration for a project still in progress."""
+        if not self.started_at or not self.completed_at:
+            return None
+        return self.completed_at - self.started_at
+
+    def duration_days(self):
+        """duration() as a whole number of days, for display — None if
+        duration() itself isn't available yet."""
+        delta = self.duration()
+        return delta.days if delta is not None else None
+
+    def mark_completed(self, user, final_amount=None, notes=''):
+        """
+        Explicit final step, separate from payment status: a fully-Paid
+        invoice means the client owes nothing more, not that the project
+        has actually been delivered. Called from project_complete_view
+        once a PM confirms handover. Snapshots final_amount and
+        completion_notes at that moment rather than deriving them live,
+        so this record can't silently change if payments are edited or
+        removed after the fact.
+        """
+        self.status = 'COMPLETED'
+        self.completed_at = timezone.now()
+        self.handed_over_by = user
+        self.completion_notes = notes
+        if final_amount is not None:
+            self.final_amount = final_amount
+        self.save()
 
 
 class CostEstimate(models.Model):

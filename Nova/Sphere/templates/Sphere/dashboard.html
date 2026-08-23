@@ -1,86 +1,249 @@
 {% extends 'Sphere/base.html' %}
 {% block title %}Dashboard - Sphere{% endblock %}
 {% block content %}
-<h3 class="mb-4">Dashboard</h3>
+<h3 class="mb-1">Welcome back, {{ user.first_name|default:user.username }}!</h3>
+<p class="text-muted mb-4">Here's what's happening with your projects.</p>
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
-    <div class="card sphere-stat-card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Total Clients</div>
-        <div class="fs-3 fw-bold">{{ total_clients }}</div>
+    <a href="{{ stat_card_urls.total_clients }}" class="sphere-stat-card-link">
+      <div class="card sphere-stat-card shadow-sm">
+        <div class="card-body">
+          <div class="sphere-stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <div>
+            <div class="text-muted small">Total Clients</div>
+            <div class="fs-4 fw-bold">{{ total_clients }}</div>
+            {% with t=stat_trends.total_clients %}
+            <div class="sphere-stat-trend {{ t.direction }}">
+              {% if t.percent is None %}New this week{% else %}{% if t.direction == 'up' %}▲{% elif t.direction == 'down' %}▼{% else %}—{% endif %} {{ t.percent }}% vs last week{% endif %}
+            </div>
+            {% endwith %}
+          </div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card sphere-stat-card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Total Projects</div>
-        <div class="fs-3 fw-bold">{{ total_projects }}</div>
+    <a href="{{ stat_card_urls.total_projects }}" class="sphere-stat-card-link">
+      <div class="card sphere-stat-card shadow-sm">
+        <div class="card-body">
+          <div class="sphere-stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <div>
+            <div class="text-muted small">Total Projects</div>
+            <div class="fs-4 fw-bold">{{ total_projects }}</div>
+            {% with t=stat_trends.total_projects %}
+            <div class="sphere-stat-trend {{ t.direction }}">
+              {% if t.percent is None %}New this week{% else %}{% if t.direction == 'up' %}▲{% elif t.direction == 'down' %}▼{% else %}—{% endif %} {{ t.percent }}% vs last week{% endif %}
+            </div>
+            {% endwith %}
+          </div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card sphere-stat-card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Leads</div>
-        <div class="fs-3 fw-bold">{{ lead_projects }}</div>
+    <a href="{{ stat_card_urls.lead_projects }}" class="sphere-stat-card-link">
+      <div class="card sphere-stat-card shadow-sm">
+        <div class="card-body">
+          <div class="sphere-stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+          </div>
+          <div>
+            <div class="text-muted small">Leads</div>
+            <div class="fs-4 fw-bold">{{ lead_projects }}</div>
+            {% with t=stat_trends.lead_projects %}
+            <div class="sphere-stat-trend {{ t.direction }}">
+              {% if t.percent is None %}New this week{% else %}{% if t.direction == 'up' %}▲{% elif t.direction == 'down' %}▼{% else %}—{% endif %} {{ t.percent }}% vs last week{% endif %}
+            </div>
+            {% endwith %}
+          </div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
-    <div class="card sphere-stat-card shadow-sm">
-      <div class="card-body">
-        <div class="text-muted small">Active Projects</div>
-        <div class="fs-3 fw-bold">{{ active_projects }}</div>
+    <a href="{{ stat_card_urls.active_projects }}" class="sphere-stat-card-link">
+      <div class="card sphere-stat-card shadow-sm">
+        <div class="card-body">
+          <div class="sphere-stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+          </div>
+          <div>
+            <div class="text-muted small">Active Projects</div>
+            <div class="fs-4 fw-bold">{{ active_projects }}</div>
+            {% with t=stat_trends.active_projects %}
+            <div class="sphere-stat-trend {{ t.direction }}">
+              {% if t.percent is None %}New this week{% else %}{% if t.direction == 'up' %}▲{% elif t.direction == 'down' %}▼{% else %}—{% endif %} {{ t.percent }}% vs last week{% endif %}
+            </div>
+            {% endwith %}
+          </div>
+        </div>
       </div>
-    </div>
+    </a>
   </div>
 </div>
 
-<div class="d-flex gap-2 mb-4">
+<div class="sphere-btn-group mb-4">
   <a href="{% url 'sphere_client_create' %}" class="btn btn-primary btn-sm">+ New Client</a>
   <a href="{% url 'sphere_project_create' %}" class="btn btn-outline-primary btn-sm">+ New Project</a>
 </div>
 
-<div class="row g-4">
+<div class="row g-4 mb-4">
   <div class="col-lg-7">
-    <div class="card sphere-card shadow-sm">
-      <div class="card-header bg-white fw-semibold">Recent Projects</div>
-      <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle">
-          <thead class="table-light">
-            <tr><th>Project</th><th>Client</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            {% for project in recent_projects %}
-            <tr>
-              <td>{{ project.project_name }}</td>
-              <td>{{ project.client.client_name }}</td>
-              <td><span class="badge sphere-badge-{{ project.status|lower }}">{{ project.get_status_display }}</span></td>
-            </tr>
-            {% empty %}
-            <tr><td colspan="3" class="text-muted text-center py-3">No projects yet.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <div class="card sphere-card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold mb-0">Projects Overview</h6>
+          <select class="form-select form-select-sm w-auto">
+            <option>This Month</option>
+            <option>This Week</option>
+            <option>This Year</option>
+          </select>
+        </div>
+        <div class="sphere-chart-wrap">
+          <canvas id="sphereProjectsChart"></canvas>
+        </div>
+        {{ chart_labels|json_script:"sphere-chart-labels" }}
+        {{ chart_values|json_script:"sphere-chart-values" }}
       </div>
     </div>
   </div>
+
   <div class="col-lg-5">
-    <div class="card sphere-card shadow-sm">
-      <div class="card-header bg-white fw-semibold">Recent Clients</div>
-      <ul class="list-group list-group-flush">
-        {% for client in recent_clients %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <span>{{ client.client_name }}<br><small class="text-muted">{{ client.client_id }}</small></span>
-          <span class="badge bg-secondary">{{ client.get_client_type_display }}</span>
-        </li>
-        {% empty %}
-        <li class="list-group-item text-muted text-center py-3">No clients yet.</li>
-        {% endfor %}
-      </ul>
+    <div class="card sphere-card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold mb-0">Recent Activity</h6>
+          <a href="{% url 'sphere_project_list' %}" class="small fw-semibold text-decoration-none">View all</a>
+        </div>
+        <ul class="list-unstyled sphere-activity-list mb-0">
+          {% for entry in recent_activity %}
+          <li class="mb-1">
+            <a href="{{ entry.url }}" class="sphere-activity-link">
+              {% if entry.type == 'project' %}
+              <span class="sphere-activity-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              </span>
+              <div class="flex-grow-1">
+                <div class="small">Project "{{ entry.obj.project_name }}" added</div>
+              </div>
+              {% else %}
+              <span class="sphere-activity-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+              </span>
+              <div class="flex-grow-1">
+                <div class="small">New client "{{ entry.obj.client_name }}" added</div>
+              </div>
+              {% endif %}
+              <span class="text-muted small text-nowrap">{{ entry.created_at|timesince }} ago</span>
+            </a>
+          </li>
+          {% empty %}
+          <li class="text-muted text-center py-3">No recent activity yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
   </div>
 </div>
+
+<div class="card sphere-card shadow-sm">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 class="fw-bold mb-0">Recent Projects</h6>
+      <a href="{% url 'sphere_project_list' %}" class="small fw-semibold text-decoration-none">View all</a>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Project</th>
+            <th>Client</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for project in recent_projects %}
+          <tr class="sphere-row-clickable" data-href="{{ project.dashboard_url }}">
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="sphere-row-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                </span>
+                {{ project.project_name }}
+              </div>
+            </td>
+            <td>{{ project.client.client_name }}</td>
+            <td><span class="badge sphere-badge-{{ project.status|lower }}">{{ project.get_status_display }}</span></td>
+            <td class="text-muted">{{ project.created_at|date:"M d, Y" }}</td>
+            <td class="text-end">
+              <div class="dropdown">
+                <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">&hellip;</button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="{{ project.dashboard_url }}">View</a></li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-muted text-center py-3">No projects yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var canvas = document.getElementById('sphereProjectsChart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  var labels = JSON.parse(document.getElementById('sphere-chart-labels').textContent);
+  var values = JSON.parse(document.getElementById('sphere-chart-values').textContent);
+
+  var ctx = canvas.getContext('2d');
+  var gradient = ctx.createLinearGradient(0, 0, 0, 230);
+  gradient.addColorStop(0, 'rgba(0, 73, 172, 0.24)');
+  gradient.addColorStop(1, 'rgba(0, 73, 172, 0)');
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        borderColor: '#0049ac',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#f76800',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#e9edf4' }, ticks: { color: '#8892a0' } },
+        x: { grid: { display: false }, ticks: { color: '#8892a0' } }
+      }
+    }
+  });
+});
+</script>
 {% endblock %}

@@ -1,13 +1,13 @@
 {% extends 'Sphere/base.html' %}
 {% block title %}Clients - Sphere{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="sphere-page-header mb-4">
   <h3 class="mb-0">Clients</h3>
   <a href="{% url 'sphere_client_create' %}" class="btn btn-primary btn-sm">+ New Client</a>
 </div>
 
 <div class="card sphere-card shadow-sm">
-  <div class="table-responsive">
+  <div class="table-responsive sphere-table-scroll">
     <table class="table table-hover mb-0 align-middle">
       <thead class="table-light">
         <tr>

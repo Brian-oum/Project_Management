@@ -1,0 +1,67 @@
+{% extends 'Sphere/base.html' %}
+{% block title %}Complete Project - {{ project.project_name }} - Sphere{% endblock %}
+{% block content %}
+
+<h3 class="mb-1">Completed &amp; Handed Over</h3>
+<p class="text-muted mb-4">
+  {{ project.project_name }}
+  <span class="badge bg-light text-dark ms-1">{{ project.client.client_id }}</span>
+  for {{ project.client.client_name }}
+</p>
+
+<div class="row">
+  <div class="col-lg-7">
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h5 class="mb-3">Confirm Handover</h5>
+        <p class="text-muted small mb-4">
+          This project is fully paid. Marking it Completed &amp; Handed Over records the final
+          amount collected and the project's duration, and is a final step — the underlying
+          payment records can still be corrected afterwards, but doing so won't move the
+          project's status backwards.
+        </p>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">{{ form.completion_notes.label }}</label>
+            {{ form.completion_notes }}
+          </div>
+          <div class="d-flex justify-content-between flex-wrap gap-2 align-items-center mt-4">
+            <a href="{% url 'sphere_invoice' project.pk %}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-success">Mark Completed &amp; Handed Over</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card sphere-card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h6 class="text-muted mb-3">What Gets Recorded</h6>
+        <div class="d-flex justify-content-between small mb-2">
+          <span class="text-muted">Final Amount Collected</span>
+          <span class="fw-semibold">KES {{ invoice.amount_paid|floatformat:2 }}</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-2">
+          <span class="text-muted">Project Started</span>
+          <span>{{ project.started_at|date:"M d, Y"|default:"—" }}</span>
+        </div>
+        <div class="d-flex justify-content-between small mb-2">
+          <span class="text-muted">Handed Over On</span>
+          <span>Today, upon confirmation</span>
+        </div>
+        <div class="d-flex justify-content-between small">
+          <span class="text-muted">Handed Over By</span>
+          <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+        </div>
+        <hr>
+        <a href="{% url 'sphere_invoice' project.pk %}" class="btn btn-outline-secondary btn-sm w-100">
+          Back to Invoice
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
