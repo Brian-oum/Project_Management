@@ -42,12 +42,16 @@ class CostEstimateInline(admin.StackedInline):
 class ProjectAdmin(admin.ModelAdmin):
     list_display = (
         'project_name', 'client', 'status', 'project_category',
-        'project_manager', 'preferred_completion_date', 'created_at',
+        'project_manager', 'preferred_completion_date', 'started_at',
+        'completed_at', 'created_at',
     )
     list_filter = ('status', 'project_category')
     search_fields = ('project_name', 'client__client_name', 'client__client_id')
     autocomplete_fields = ['client']
-    readonly_fields = ('created_at', 'updated_at', 'requirements_summary')
+    readonly_fields = (
+        'created_at', 'updated_at', 'requirements_summary',
+        'started_at', 'completed_at', 'handed_over_by', 'final_amount', 'duration_display',
+    )
     inlines = [CostEstimateInline]
 
     def requirements_summary(self, obj):
@@ -59,6 +63,11 @@ class ProjectAdmin(admin.ModelAdmin):
             lines.append(f"Non-Functional: {', '.join(nfr)}")
         return '\n'.join(lines) or 'No requirements captured yet.'
     requirements_summary.short_description = 'Requirements (read-only summary)'
+
+    def duration_display(self, obj):
+        days = obj.duration_days()
+        return f"{days} days" if days is not None else "—"
+    duration_display.short_description = 'Duration (started → completed)'
 
 
 @admin.register(CostEstimate)

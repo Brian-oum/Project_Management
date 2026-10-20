@@ -6,13 +6,16 @@
     <div class="card sphere-card shadow-sm">
       <div class="card-body p-4">
         <div class="text-center mb-4">
-          <h2 class="fw-bold mb-0">Create your account</h2>
-          <p class="text-muted small mb-0">Project Manager registration</p>
+          <img src="{% static 'images/nova_logo.webp' %}" alt="NovaSphere logo" class="mx-auto mb-3" style="width:56px;height:56px;border-radius:16px;object-fit:cover;display:block;">
+          <h2 class="fw-bold mb-0">
+            <span style="color: var(--sphere-primary);">Nova</span><span style="color: var(--sphere-accent);">Sphere</span>
+          </h2>
+          <p class="text-muted small mb-0">IT Project Management System</p>
         </div>
         <form method="post" novalidate>
           {% csrf_token %}
           {% if form.non_field_errors %}
-            <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+            <div class="alert alert-danger py-2 sphere-alert">{{ form.non_field_errors }}</div>
           {% endif %}
           <div class="row">
             <div class="col-md-6 mb-3">

@@ -1,127 +1,189 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-  @page { size: A4; margin: 2cm; }
-  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; color: #222; }
+  @page { size: A4; margin: 1.8cm; }
+  body { font-family: Helvetica, Arial, sans-serif; font-size: 10.5px; color: #1c2430; }
   h1 { font-size: 20px; margin: 0 0 4px 0; }
-  .muted { color: #777; }
-  .small { font-size: 9px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .muted { color: #8892a0; }
   table { width: 100%; border-collapse: collapse; }
-  .header-table td { vertical-align: top; padding-bottom: 16px; border-bottom: 1px solid #ddd; }
-  .cost-table td { padding: 4px 0; }
-  .cost-table td.amount { text-align: right; }
-  .cost-table tr.subtotal td { border-top: 1px solid #999; font-weight: bold; padding-top: 8px; }
-  .cost-table tr.total td { border-top: 1px solid #222; font-weight: bold; font-size: 14px; padding-top: 8px; }
-  .cost-table tr.balance td { color: #1a7f37; font-weight: bold; font-size: 14px; }
-  .indent { padding-left: 16px; }
-  .indent2 { padding-left: 28px; }
-  .section-label { text-transform: uppercase; color: #777; font-size: 9px; padding-top: 12px; }
+
+  /* ---------- Header / letterhead ---------- */
+  .brand-table td { vertical-align: top; padding-bottom: 12px; border-bottom: 3px solid #0049ac; }
+  .brand-logo { display: block; height: 32px; width: auto; margin-bottom: 6px; }
+  .brand-name { font-size: 17px; font-weight: bold; letter-spacing: 0.04em; text-transform: uppercase; color: #013572; }
+  .brand-tagline { font-size: 8.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #f76800; padding-top: 2px; padding-bottom: 6px; }
+  .brand-contact { font-size: 9.5px; color: #8892a0; line-height: 15px; }
+  .invoice-title { font-size: 9px; font-weight: bold; letter-spacing: 0.12em; text-transform: uppercase; color: #8892a0; text-align: right; }
+  .invoice-number { font-size: 15px; font-weight: bold; color: #013572; text-align: right; padding: 2px 0 6px 0; }
+  .invoice-dates { font-size: 9.5px; color: #4b5563; text-align: right; line-height: 17px; }
+  .invoice-dates .field-label { display: inline-block; min-width: 40px; text-transform: uppercase; font-size: 8px; letter-spacing: 0.06em; color: #8892a0; }
+
+  /* ---------- Billed to ---------- */
+  .billed-to { background-color: #eef4fd; border: 1px solid #dbe6f8; padding: 10px 14px; margin-top: 16px; margin-bottom: 18px; }
+  .billed-to-label { font-size: 8.5px; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; color: #0049ac; padding-bottom: 4px; }
+  .billed-to-name { font-size: 12px; font-weight: bold; color: #1c2430; }
+
+  /* ---------- Cost breakdown (bordered grid, like the reference sample) ---------- */
+  .section-heading { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #013572; padding: 14px 0 6px 0; }
+
+  .cost-table { border: 1px solid #c9d2e0; }
+  .cost-table td { padding: 6px 10px; border: 1px solid #e3e8f0; }
+  .cost-table td.amount { text-align: right; white-space: nowrap; }
+  .cost-table tr.col-head td { font-size: 8.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.06em; color: #ffffff; background-color: #0049ac; border: 1px solid #0049ac; }
+  .cost-table tr.category-row td { background-color: #eef4fd; font-weight: bold; text-transform: uppercase; font-size: 9px; letter-spacing: 0.04em; color: #013572; }
+  .cost-table tr.feature-group td { background-color: #f7f9fc; font-style: italic; color: #4b5563; }
+  .cost-table tr.indent td.desc { padding-left: 22px; }
+  .cost-table tr.indent2 td.desc { padding-left: 34px; }
+  .cost-table tr.subtotal td { border-top: 2px solid #0049ac; font-weight: bold; background-color: #f7f9fc; }
+
+  /* ---------- Total / balance highlight boxes ---------- */
+  .highlight-table { margin-top: 10px; }
+  .highlight-table td { border: none; padding: 10px 14px; }
+  .highlight-table tr.total td { background-color: #fde9d9; color: #c95300; font-weight: bold; font-size: 13px; border: 1px solid #f7cba3; }
+  .highlight-table tr.balance td { background-color: #e5f7ec; color: #1a7a4c; font-weight: bold; font-size: 13px; border: 1px solid #b9e6cb; }
+
+  /* ---------- Payment info box ---------- */
+  .payment-box { border: 2px dashed #f76800; background-color: #fffaf5; padding: 10px 14px; margin-top: 20px; }
+  .payment-box-label { font-size: 8.5px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em; color: #8892a0; padding-bottom: 6px; }
+  .payment-box-till { font-size: 14px; font-weight: bold; color: #c95300; }
+
+  /* ---------- Payment terms ---------- */
+  .terms-box { margin-top: 16px; border-top: 1px solid #e3e8f0; padding-top: 10px; }
+  .terms-box p { margin: 2px 0; font-size: 10px; line-height: 1.5; }
+
+  /* ---------- Signature footer ---------- */
+  .signature-table { margin-top: 26px; }
+  .signature-thanks { color: #8892a0; font-size: 9.5px; }
+  .signature-line { border-top: 1px solid #8892a0; text-align: right; font-size: 8px; text-transform: uppercase; letter-spacing: 0.06em; color: #8892a0; padding-top: 4px; }
 </style>
 </head>
 <body>
 
-  <h1>Invoice</h1>
-  <p class="muted">{{ invoice.invoice_number }}</p>
-
-  <table class="header-table">
+  <table class="brand-table">
     <tr>
-      <td width="25%">
-        <div class="small muted">Client</div>
-        <div>{{ project.client.client_name }} ({{ project.client.client_id }})</div>
+      <td width="55%">
+        <img class="brand-logo" src="{% static 'images/nova_logo.jpeg' %}" alt="{{ company.name|default:'NovaSphere IT Solutions' }}">
+        <div class="brand-name">{{ company.name|default:"NovaSphere IT Solutions" }}</div>
+        <div class="brand-tagline">{{ company.tagline|default:"Custom Software & IT Solutions" }}</div>
+        <div class="brand-contact">
+          {{ company.address }}<br>
+          {{ company.phone|default:"+254 714 937 625" }} &middot; {{ company.email|default:"info@novasphereitsolutions.co.ke" }}
+        </div>
       </td>
-      <td width="25%">
-        <div class="small muted">Project</div>
-        <div>{{ project.project_name }}</div>
-      </td>
-      <td width="25%">
-        <div class="small muted">Invoice Date</div>
-        <div>{{ invoice.invoice_date|date:"M d, Y" }}</div>
-      </td>
-      <td width="25%">
-        <div class="small muted">Due Date</div>
-        <div>{{ invoice.due_date|date:"M d, Y"|default:"—" }}</div>
+      <td width="45%">
+        <div class="invoice-title">Invoice</div>
+        <div class="invoice-number">{{ invoice.invoice_number }}</div>
+        <div class="invoice-dates">
+          <span class="field-label">Date</span> {{ invoice.invoice_date|date:"M d, Y" }}<br>
+          <span class="field-label">Due</span> {{ invoice.due_date|date:"M d, Y"|default:"—" }}
+        </div>
       </td>
     </tr>
   </table>
 
-  <div class="section-label">Cost Breakdown</div>
+  <div class="billed-to">
+    <div class="billed-to-label">Billed To (Client Details)</div>
+    <div class="billed-to-name">{{ project.client.client_name }} ({{ project.client.client_id }})</div>
+    <div class="muted">{{ project.project_name }}</div>
+  </div>
+
+  <div class="section-heading">Cost Breakdown</div>
   <table class="cost-table">
+    <tr class="col-head">
+      <td class="desc">Description</td>
+      <td class="amount">Amount</td>
+    </tr>
     {% for label, amount in quotation.cost_component_items %}
     <tr>
-      <td>{{ label }}</td>
+      <td class="desc">{{ label }}</td>
       <td class="amount">KES {{ amount|floatformat:2 }}</td>
     </tr>
     {% endfor %}
 
     {% if quotation.feature_requirement_groups %}
-    <tr><td colspan="2" class="section-label">Functional Requirements</td></tr>
+    <tr class="category-row"><td colspan="2">Functional Requirements</td></tr>
     {% for group_label, items in quotation.feature_requirement_groups %}
-    <tr><td colspan="2" class="indent muted">{{ group_label }}</td></tr>
+    <tr class="feature-group"><td colspan="2" class="desc indent">{{ group_label }}</td></tr>
       {% for feature_label, cost in items %}
-      <tr>
-        <td class="indent2">{{ feature_label }}</td>
+      <tr class="indent2">
+        <td class="desc">{{ feature_label }}</td>
         <td class="amount">KES {{ cost|floatformat:2 }}</td>
       </tr>
       {% endfor %}
     {% endfor %}
     <tr>
-      <td class="indent"><i>Functional Requirements Subtotal</i></td>
+      <td class="desc indent"><i>Functional Requirements Subtotal</i></td>
       <td class="amount"><i>KES {{ quotation.feature_requirements_total|floatformat:2 }}</i></td>
     </tr>
     {% endif %}
 
     <tr class="subtotal">
-      <td>Subtotal</td>
+      <td class="desc">Subtotal</td>
       <td class="amount">KES {{ quotation.subtotal|floatformat:2 }}</td>
     </tr>
     {% if quotation.discount_amount %}
     <tr>
-      <td>Discount</td>
+      <td class="desc">Discount</td>
       <td class="amount">- KES {{ quotation.discount_amount|floatformat:2 }}</td>
     </tr>
     {% endif %}
     <tr>
-      <td>VAT ({{ quotation.vat_rate|floatformat:2 }}%)</td>
+      <td class="desc">VAT ({{ quotation.vat_rate|floatformat:2 }}%)</td>
       <td class="amount">KES {{ quotation.vat_amount|floatformat:2 }}</td>
     </tr>
+  </table>
+
+  <table class="highlight-table">
     <tr class="total">
       <td>Total Due</td>
-      <td class="amount">KES {{ invoice.total_due|floatformat:2 }}</td>
+      <td class="amount" style="text-align:right;">KES {{ invoice.total_due|floatformat:2 }}</td>
     </tr>
   </table>
 
   {% if payments %}
-  <div class="section-label">Payments Received</div>
+  <div class="section-heading">Payments Received</div>
   <table class="cost-table">
     {% for payment in payments %}
     <tr>
-      <td>{{ payment.date_paid|date:"M d, Y" }} — {{ payment.get_method_display }}{% if payment.description %} ({{ payment.description }}){% endif %}</td>
+      <td class="desc">{{ payment.date_paid|date:"M d, Y" }} — {{ payment.get_method_display }}{% if payment.description %} ({{ payment.description }}){% endif %}</td>
       <td class="amount">KES {{ payment.amount|floatformat:2 }}</td>
     </tr>
     {% endfor %}
     <tr class="subtotal">
-      <td>Total Paid</td>
+      <td class="desc">Total Paid</td>
       <td class="amount">KES {{ invoice.amount_paid|floatformat:2 }}</td>
     </tr>
   </table>
   {% endif %}
 
-  <table class="cost-table">
+  <table class="highlight-table">
     <tr class="balance">
       <td>Outstanding Balance</td>
-      <td class="amount">KES {{ invoice.outstanding_balance|floatformat:2 }}</td>
+      <td class="amount" style="text-align:right;">KES {{ invoice.outstanding_balance|floatformat:2 }}</td>
     </tr>
   </table>
 
   {% if quotation.payment_terms %}
-  <div class="section-label">Payment Terms</div>
-  <p>{{ quotation.payment_terms }}</p>
+  <div class="terms-box">
+    <div class="section-heading" style="padding-top:0;">Payment Terms</div>
+    <p>{{ quotation.payment_terms }}</p>
+  </div>
   {% endif %}
 
-  <div class="section-label">Accepted Payment Methods</div>
-  <p class="muted">M-Pesa &middot; Bank Transfer &middot; PayPal &middot; Stripe</p>
+  <div class="payment-box">
+    <div class="payment-box-label">Payment Information</div>
+    <div class="payment-box-till">M-Pesa Till Number: {{ company.payment_till|default:"6954022" }}</div>
+  </div>
+
+  <table class="signature-table">
+    <tr>
+      <td width="50%" class="signature-thanks">Thank you for choosing {{ company.name|default:"NovaSphere IT Solutions" }}.</td>
+      <td width="50%" class="signature-line">Authorized signature &amp; stamp</td>
+    </tr>
+  </table>
 
 </body>
 </html>

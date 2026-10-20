@@ -1,24 +1,169 @@
 import json
+import os
+from decimal import Decimal
 from functools import wraps
 
 from io import BytesIO
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.staticfiles import finders
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 from xhtml2pdf import pisa
 
 from .forms import (
     RegistrationForm, ClientForm, ProjectForm, SphereAuthenticationForm,
     CostEstimateForm, TechnicalReviewForm, QuotationForm, InvoiceForm,
-    PaymentForm, ProjectStatusForm,
+    PaymentForm, ProjectStatusForm, ProjectCompletionForm,
 )
 from .models import Client, Project, CostEstimate, Quotation, Invoice, Payment
+
+
+# Letterhead details for the invoice document (on-screen and PDF). Edit these
+# to match your actual business — or replace with a lookup against a Company/
+# Settings model if you'd rather manage this from the admin than from code.
+SPHERE_COMPANY_PROFILE = {
+    'address': 'Nairobi, Kenya',
+    'phone': '+254 714 937 625',
+    'email': ' info@novasphereitsolutions.co.ke',
+    'payment_till': '6954022',
+}
+
+
+def pdf_link_callback(uri, rel):
+    """
+    xhtml2pdf (pisa) renders in-process — it has no web server in front of
+    it, so it can't fetch '/static/...' or '/media/...' URLs the way a
+    browser would. Every such URI (e.g. the logo <img src="{% static %}">
+    in invoice_pdf.html / quotation_pdf.html) has to be translated into an
+    absolute filesystem path before pisa can embed it. Without this, pisa
+    just silently drops the image and renders the rest of the page fine —
+    which is exactly the "logo missing from the PDF, but fine on screen"
+    symptom.
+
+    This is passed as link_callback= to pisa.CreatePDF() below.
+    """
+    def _with_leading_slash(value):
+        return value if value.startswith('/') else '/' + value
+
+    static_url = _with_leading_slash(settings.STATIC_URL or '/static/')
+    media_url = getattr(settings, 'MEDIA_URL', None)
+    media_url = _with_leading_slash(media_url) if media_url else None
+    normalized_uri = _with_leading_slash(uri)
+
+    if normalized_uri.startswith(static_url):
+        # IMPORTANT: this must be relative to the static namespace (i.e.
+        # WITHOUT the STATIC_URL prefix) — that's what finders.find() and
+        # STATIC_ROOT both expect. No leading slash either: on Windows,
+        # os.path.join() silently discards everything before a component
+        # that starts with a separator, which previously caused
+        # STATIC_ROOT to be dropped entirely.
+        rel_path = normalized_uri[len(static_url):].lstrip('/')
+
+        found = finders.find(rel_path)
+        if found:
+            if isinstance(found, (list, tuple)):
+                found = found[0]
+            return os.path.realpath(found)
+
+        if settings.STATIC_ROOT:
+            candidate = os.path.normpath(os.path.join(settings.STATIC_ROOT, rel_path))
+            if os.path.isfile(candidate):
+                return candidate
+
+    if media_url and normalized_uri.startswith(media_url):
+        rel_path = normalized_uri[len(media_url):].lstrip('/')
+        media_root = getattr(settings, 'MEDIA_ROOT', None)
+        if media_root:
+            candidate = os.path.normpath(os.path.join(media_root, rel_path))
+            if os.path.isfile(candidate):
+                return candidate
+
+    if os.path.isfile(uri):
+        # Already an absolute filesystem path.
+        return uri
+
+    raise Exception(
+        f'pdf_link_callback: could not resolve "{uri}" to a file on disk. '
+        f'STATIC_URL={settings.STATIC_URL!r}, STATIC_ROOT={settings.STATIC_ROOT!r}. '
+        f'Make sure the logo file actually exists under a static/ directory '
+        f'Django knows about (e.g. Sphere/static/images/nova_logo.jpeg, or '
+        f'wherever your STATICFILES_DIRS points), and, in production, that '
+        f'`collectstatic` has been run.'
+    )
+
+
+def _safe_reverse(name, **kwargs):
+    """Resolve a named URL, or None if it isn't wired up in urls.py yet."""
+    try:
+        return reverse(name, kwargs=kwargs)
+    except NoReverseMatch:
+        return None
+
+
+def project_landing_url(project):
+    """
+    Where a project row/activity entry should link to — whatever page
+    reflects the phase the project is actually sitting in right now, so
+    clicking it always lands on the next relevant action instead of a
+    dead end. Falls back to the project list if a step's URL isn't
+    available for some reason.
+    """
+    quotation = getattr(project, 'quotation', None)
+    invoice = getattr(quotation, 'invoice', None) if quotation else None
+
+    if invoice is not None:
+        url = _safe_reverse('sphere_invoice', project_id=project.pk)
+        if url:
+            return url
+    if quotation is not None:
+        url = _safe_reverse('sphere_quotation', project_id=project.pk)
+        if url:
+            return url
+    if project.has_cost_estimate():
+        url = _safe_reverse('sphere_technical_review', project_id=project.pk)
+        if url:
+            return url
+    if project.has_requirements():
+        url = _safe_reverse('sphere_estimate_create', project_id=project.pk)
+        if url:
+            return url
+    url = _safe_reverse('sphere_project_edit', pk=project.pk)
+    if url:
+        return url
+    return reverse('sphere_project_list')
+
+
+def _period_trend(queryset, period_start, prev_start, prev_end):
+    """
+    Compares how many rows were created in the last 7 days against the
+    7 days before that, for the dashboard stat cards' up/down indicator.
+    Returns a dict with a direction ('up' / 'down' / 'flat') and a
+    percent change, or percent=None when there's no prior-period baseline
+    to compare against (so the template can show "New" instead of a
+    misleading percentage).
+    """
+    current = queryset.filter(created_at__date__gte=period_start).count()
+    previous = queryset.filter(
+        created_at__date__gte=prev_start,
+        created_at__date__lte=prev_end,
+    ).count()
+
+    if previous == 0:
+        if current == 0:
+            return {'direction': 'flat', 'percent': 0}
+        return {'direction': 'up', 'percent': None}
+
+    percent = round(((current - previous) / previous) * 100)
+    direction = 'up' if percent > 0 else 'down' if percent < 0 else 'flat'
+    return {'direction': direction, 'percent': abs(percent)}
 
 
 def pm_login_required(view_func):
@@ -68,13 +213,85 @@ def register_view(request):
 
 @pm_login_required
 def dashboard_view(request):
+    # REJECTED and COMPLETED are the two terminal states now that
+    # Completed & Handed Over exists — everything else (including
+    # Approved, In Progress, Paid in Full) is still actively moving.
+    completed_projects_qs = Project.objects.filter(status='COMPLETED')
+    total_revenue = completed_projects_qs.aggregate(total=Sum('final_amount'))['total'] or Decimal('0.00')
+    durations = [days for days in (p.duration_days() for p in completed_projects_qs) if days is not None]
+    avg_duration_days = round(sum(durations) / len(durations)) if durations else None
+
+    recent_projects = list(Project.objects.select_related('client')[:5])
+    recent_clients = list(Client.objects.all()[:5])
+
+    # Every project row/card on the dashboard is clickable — point it at
+    # whatever page reflects that project's current phase.
+    for project in recent_projects:
+        project.dashboard_url = project_landing_url(project)
+
+    # Dashboard "Recent Activity" feed — projects and clients merged into a
+    # single feed ordered by created_at, instead of two separate lists, so
+    # the panel reads chronologically the way an activity feed should.
+    recent_activity = sorted(
+        [{'type': 'project', 'obj': p, 'created_at': p.created_at,
+          'url': project_landing_url(p)} for p in recent_projects]
+        + [{'type': 'client', 'obj': c, 'created_at': c.created_at,
+            'url': reverse('sphere_client_list')} for c in recent_clients],
+        key=lambda entry: entry['created_at'],
+        reverse=True,
+    )[:6]
+
+    # "Projects Overview" chart — number of projects created on each of the
+    # last 7 days, oldest first, for the Sales-Overview-style line chart.
+    today = timezone.localdate()
+    chart_days = [today - timezone.timedelta(days=offset) for offset in range(6, -1, -1)]
+    chart_labels = [day.strftime('%a') for day in chart_days]
+    chart_values = [
+        Project.objects.filter(created_at__date=day).count()
+        for day in chart_days
+    ]
+
+    # Stat card trend badges — rows created in the last 7 days vs the 7
+    # days before that. An approximation (a snapshot count like "Active
+    # Projects" isn't purely a function of creation date), but it gives a
+    # useful, honest "busier/quieter than last week" signal without
+    # needing separate historical snapshots.
+    period_start = today - timezone.timedelta(days=6)
+    prev_start = today - timezone.timedelta(days=13)
+    prev_end = today - timezone.timedelta(days=7)
+    stat_trends = {
+        'total_clients': _period_trend(Client.objects.all(), period_start, prev_start, prev_end),
+        'total_projects': _period_trend(Project.objects.all(), period_start, prev_start, prev_end),
+        'lead_projects': _period_trend(
+            Project.objects.filter(status='LEAD'), period_start, prev_start, prev_end
+        ),
+        'active_projects': _period_trend(
+            Project.objects.exclude(status__in=['REJECTED', 'COMPLETED']),
+            period_start, prev_start, prev_end,
+        ),
+    }
+
     context = {
         'total_clients': Client.objects.count(),
         'total_projects': Project.objects.count(),
         'lead_projects': Project.objects.filter(status='LEAD').count(),
-        'active_projects': Project.objects.exclude(status__in=['APPROVED', 'REJECTED']).count(),
-        'recent_projects': Project.objects.select_related('client')[:5],
-        'recent_clients': Client.objects.all()[:5],
+        'active_projects': Project.objects.exclude(status__in=['REJECTED', 'COMPLETED']).count(),
+        'in_progress_projects': Project.objects.filter(status='IN_PROGRESS').count(),
+        'completed_projects': completed_projects_qs.count(),
+        'total_revenue': total_revenue,
+        'avg_duration_days': avg_duration_days,
+        'recent_projects': recent_projects,
+        'recent_clients': recent_clients,
+        'recent_activity': recent_activity,
+        'chart_labels': chart_labels,
+        'chart_values': chart_values,
+        'stat_trends': stat_trends,
+        'stat_card_urls': {
+            'total_clients': reverse('sphere_client_list'),
+            'total_projects': reverse('sphere_project_list'),
+            'lead_projects': f"{reverse('sphere_project_list')}?status=LEAD",
+            'active_projects': f"{reverse('sphere_project_list')}?status=active",
+        },
     }
     return render(request, 'Sphere/dashboard.html', context)
 
@@ -108,7 +325,21 @@ def client_create_view(request):
 @pm_login_required
 def project_list_view(request):
     projects = Project.objects.select_related('client', 'cost_estimate')
-    return render(request, 'Sphere/project_list.html', {'projects': projects})
+
+    # Optional ?status= filter — 'active' is a shorthand for "not
+    # Rejected and not Completed", matching the dashboard's Active
+    # Projects stat card; anything else is matched against the status
+    # field directly (e.g. ?status=LEAD from the Leads stat card).
+    status_filter = request.GET.get('status')
+    if status_filter == 'active':
+        projects = projects.exclude(status__in=['REJECTED', 'COMPLETED'])
+    elif status_filter:
+        projects = projects.filter(status=status_filter)
+
+    return render(request, 'Sphere/project_list.html', {
+        'projects': projects,
+        'status_filter': status_filter,
+    })
 
 
 @pm_login_required
@@ -507,7 +738,7 @@ def quotation_pdf_view(request, project_id):
     })
 
     result = BytesIO()
-    pdf = pisa.CreatePDF(src=html_string, dest=result)
+    pdf = pisa.CreatePDF(src=html_string, dest=result, link_callback=pdf_link_callback)
 
     if pdf.err:
         return HttpResponse(
@@ -522,13 +753,16 @@ def quotation_pdf_view(request, project_id):
 
 
 # How an Invoice's derived status maps onto the project's overall status —
-# mirrors _QUOTATION_STATUS_TO_PROJECT_STATUS above. Both "Awaiting
-# Initial Payment" and "Partially Paid" leave the project waiting on the
-# client, so both map to the same AWAITING_PAYMENT project status; only a
-# fully-paid invoice moves the project to PAID.
+# mirrors _QUOTATION_STATUS_TO_PROJECT_STATUS above. The first payment
+# (however partial) moves a project out of "waiting on the client" and
+# into IN_PROGRESS — work is underway — distinct from AWAITING_PAYMENT
+# before it and PAID once the final payment lands. PAID itself isn't the
+# same as COMPLETED: being fully paid doesn't mean the project has
+# actually been delivered/handed over, so that's always a separate,
+# explicit step (see project_complete_view / Project.mark_completed()).
 _INVOICE_STATUS_TO_PROJECT_STATUS = {
     Invoice.STATUS_AWAITING_PAYMENT: 'AWAITING_PAYMENT',
-    Invoice.STATUS_PARTIALLY_PAID: 'AWAITING_PAYMENT',
+    Invoice.STATUS_PARTIALLY_PAID: 'IN_PROGRESS',
     Invoice.STATUS_PAID: 'PAID',
 }
 
@@ -540,8 +774,27 @@ def _resync_invoice_and_project(invoice, project):
     without a PM having to set either by hand."""
     invoice.sync_status()
     invoice.save(update_fields=['status', 'updated_at'])
-    project.status = _INVOICE_STATUS_TO_PROJECT_STATUS[invoice.status]
-    project.save(update_fields=['status'])
+
+    update_fields = []
+
+    # First payment received, however partial — record when project
+    # execution actually started, so Project.duration() has a real start
+    # point once the project is later marked Completed.
+    if invoice.amount_paid() > Decimal('0.00') and project.started_at is None:
+        project.started_at = timezone.now()
+        update_fields.append('started_at')
+
+    # Once a project has been marked Completed & Handed Over, payment
+    # bookkeeping (e.g. correcting a mis-entered payment) shouldn't
+    # silently move it back to an earlier stage — completion is a
+    # deliberate, final step.
+    if project.status != 'COMPLETED':
+        project.status = _INVOICE_STATUS_TO_PROJECT_STATUS[invoice.status]
+        update_fields.append('status')
+
+    if update_fields:
+        project.save(update_fields=update_fields)
+
 
 
 @pm_login_required
@@ -601,7 +854,15 @@ def invoice_view(request, project_id):
                     messages.success(
                         request,
                         f'Payment of KES {payment.amount:,.2f} recorded — invoice fully paid, '
-                        f'"{project.project_name}" marked Paid.'
+                        f'"{project.project_name}" marked Paid in Full. Mark it Completed & '
+                        f'Handed Over once delivery is confirmed.'
+                    )
+                elif project.status == 'IN_PROGRESS' and invoice.payments.count() == 1:
+                    messages.success(
+                        request,
+                        f'Payment of KES {payment.amount:,.2f} recorded — '
+                        f'"{project.project_name}" is now In Progress. '
+                        f'Outstanding Balance KES {invoice.outstanding_balance():,.2f}.'
                     )
                 else:
                     messages.success(
@@ -633,6 +894,7 @@ def invoice_view(request, project_id):
         'invoice': invoice,
         'payments': invoice.payments.all(),
         'status_form': ProjectStatusForm(instance=project),
+        'company': SPHERE_COMPANY_PROFILE,
     })
 
 
@@ -656,10 +918,11 @@ def invoice_pdf_view(request, project_id):
         'quotation': quotation,
         'invoice': invoice,
         'payments': invoice.payments.all(),
+        'company': SPHERE_COMPANY_PROFILE,
     })
 
     result = BytesIO()
-    pdf = pisa.CreatePDF(src=html_string, dest=result)
+    pdf = pisa.CreatePDF(src=html_string, dest=result, link_callback=pdf_link_callback)
 
     if pdf.err:
         return HttpResponse(
@@ -697,3 +960,59 @@ def project_status_update_view(request, pk):
             messages.error(request, 'Could not update project status.')
 
     return redirect(next_url)
+
+
+@pm_login_required
+def project_complete_view(request, project_id):
+    """
+    Final step after Phase 7 — Completed & Handed Over. Only reachable
+    once the invoice is fully Paid: being fully paid and actually having
+    delivered/handed over the project aren't the same thing, so this is
+    always a deliberate, explicit action rather than something a payment
+    triggers automatically (see _resync_invoice_and_project, which stops
+    short at PAID).
+
+    Snapshots the final amount actually collected and lets the PM record
+    handover notes; Project.duration() (started_at -> completed_at) then
+    becomes available for reporting once this is set.
+    """
+    project = get_object_or_404(Project.objects.select_related('client'), pk=project_id)
+    quotation = getattr(project, 'quotation', None)
+    invoice = getattr(quotation, 'invoice', None) if quotation else None
+
+    if invoice is None or not invoice.is_paid():
+        messages.info(
+            request,
+            f'"{project.project_name}" needs to be fully paid before it can be marked '
+            f'Completed & Handed Over.'
+        )
+        return redirect('sphere_invoice', project_id=project.pk)
+
+    if project.is_completed():
+        messages.info(request, f'"{project.project_name}" is already marked Completed & Handed Over.')
+        return redirect('sphere_invoice', project_id=project.pk)
+
+    if request.method == 'POST':
+        form = ProjectCompletionForm(request.POST)
+        if form.is_valid():
+            project.mark_completed(
+                user=request.user,
+                final_amount=invoice.amount_paid(),
+                notes=form.cleaned_data['completion_notes'],
+            )
+            messages.success(
+                request,
+                f'"{project.project_name}" marked Completed & Handed Over — '
+                f'final amount KES {project.final_amount:,.2f}'
+                + (f', duration {project.duration_days()} days.' if project.duration_days() is not None else '.')
+            )
+            return redirect('sphere_invoice', project_id=project.pk)
+    else:
+        form = ProjectCompletionForm()
+
+    return render(request, 'Sphere/project_complete.html', {
+        'form': form,
+        'project': project,
+        'quotation': quotation,
+        'invoice': invoice,
+    })

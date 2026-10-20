@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Sphere IT PMS{% endblock %}</title>
+<link rel="icon" type="image/webp" href="{% static 'images/nova_logo.webp' %}">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 {% block extra_css %}{% endblock %}
@@ -12,37 +13,82 @@
 <body>
 
 {% if user.is_authenticated %}
-<nav class="navbar navbar-expand-lg navbar-dark sphere-navbar mb-4">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-bold" href="{% url 'sphere_dashboard' %}">Sphere <span class="fw-light">IT PMS</span></a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navMain">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'sphere_dashboard' %}active{% endif %}" href="{% url 'sphere_dashboard' %}">Dashboard</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if 'client' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'sphere_client_list' %}">Clients</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link {% if 'project' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'sphere_project_list' %}">Projects</a>
-        </li>
-      </ul>
-      <span class="navbar-text me-3 text-light-50">
-        Signed in as <strong>{{ user.get_full_name|default:user.username }}</strong>
-      </span>
-      <form action="{% url 'sphere_logout' %}" method="post" class="d-inline">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
-      </form>
+<script>
+  // Read the persisted sidebar state before first paint so the sidebar
+  // doesn't flash collapsed-then-expanded for users who left it open.
+  (function () {
+    try {
+      if (localStorage.getItem('sphere-sidebar-expanded') === 'true') {
+        document.documentElement.classList.add('sphere-sidebar-expanded');
+      }
+    } catch (e) {}
+  })();
+</script>
+<div class="sphere-shell">
+  <div class="sphere-mobile-backdrop" id="sphereMobileBackdrop"></div>
+  <aside class="sphere-sidebar d-flex flex-column" id="sphereSidebarNav">
+    <div class="sphere-sidebar-header">
+      <button type="button" class="sphere-sidebar-toggle" id="sphereSidebarToggle" aria-label="Toggle sidebar" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <a class="sphere-logo" href="{% url 'sphere_dashboard' %}">
+        <img src="{% static 'images/nova_logo.webp' %}" alt="Nova logo" class="sphere-logo-photo">
+        <span class="fw-bold fs-5 sphere-logo-text">NovaSphere</span>
+      </a>
+      <button type="button" class="sphere-mobile-nav-close" id="sphereMobileNavClose" aria-label="Close menu">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
-  </div>
-</nav>
+
+    <nav class="nav flex-column flex-grow-1">
+      <a class="nav-link {% if request.resolver_match.url_name == 'sphere_dashboard' %}active{% endif %}" href="{% url 'sphere_dashboard' %}" title="Dashboard">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span class="link-label">Dashboard</span>
+      </a>
+      <a class="nav-link {% if 'client' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'sphere_client_list' %}" title="Clients">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        <span class="link-label">Clients</span>
+      </a>
+      <a class="nav-link {% if 'project' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'sphere_project_list' %}" title="Projects">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+        <span class="link-label">Projects</span>
+      </a>
+    </nav>
+
+    <form action="{% url 'sphere_logout' %}" method="post">
+      {% csrf_token %}
+      <button type="submit" class="nav-link w-100 text-start border-0 bg-transparent" title="Log out">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        <span class="link-label">Log out</span>
+      </button>
+    </form>
+  </aside>
+
+  <div class="sphere-main">
+    <header class="sphere-topbar d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <button type="button" class="sphere-mobile-nav-toggle" id="sphereMobileNavToggle" aria-label="Open menu" aria-controls="sphereSidebarNav" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <button type="button" class="sphere-notification-btn" data-bs-toggle="offcanvas" data-bs-target="#sphereNotifications" aria-controls="sphereNotifications" aria-label="Notifications">
+          <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          {% if recent_activity %}<span class="sphere-notification-dot-badge"></span>{% endif %}
+        </button>
+        <div class="d-flex align-items-center gap-2">
+          <div class="sphere-avatar">{{ user.get_full_name|default:user.username|first|upper }}</div>
+          <span class="fw-semibold small d-none d-sm-inline">{{ user.get_full_name|default:user.username }}</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="container-fluid sphere-content pb-5">
+{% else %}
+<div class="container pb-5 pt-4">
 {% endif %}
 
-<div class="container pb-5">
+
   {% if messages %}
     {% for message in messages %}
       <div class="alert alert-{{ message.tags }} alert-dismissible fade show sphere-alert" role="alert">
@@ -53,10 +99,109 @@
   {% endif %}
 
   {% block content %}{% endblock %}
+
+{% if user.is_authenticated %}
+    </div>
+  </div>
 </div>
+{% else %}
+</div>
+{% endif %}
+
+{% if user.is_authenticated %}
+<div class="offcanvas offcanvas-end sphere-offcanvas" tabindex="-1" id="sphereNotifications" aria-labelledby="sphereNotificationsLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title fw-bold" id="sphereNotificationsLabel">Notifications</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body pt-0">
+    {% if recent_activity %}
+    <ul class="list-unstyled sphere-notification-list mb-0">
+      {% for entry in recent_activity %}
+      <li>
+        <a href="{{ entry.url }}" class="sphere-notification-item">
+          <span class="sphere-notification-dot"></span>
+          <div class="flex-grow-1">
+            <div class="small">
+              {% if entry.type == 'project' %}
+                Project "{{ entry.obj.project_name }}" added
+              {% else %}
+                New client "{{ entry.obj.client_name }}" added
+              {% endif %}
+            </div>
+            <div class="text-muted small">{{ entry.created_at|timesince }} ago</div>
+          </div>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted text-center py-5 mb-0">No new notifications.</p>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="{% static 'js/script.js' %}"></script>
+{% if user.is_authenticated %}
+<script>
+  // Mobile off-canvas nav: the hamburger lives in the topbar (always
+  // reachable) and slides the sidebar in from the left, independently of
+  // the desktop icon-only/expanded toggle inside the sidebar itself.
+  (function () {
+    var mobileToggle = document.getElementById('sphereMobileNavToggle');
+    var mobileClose = document.getElementById('sphereMobileNavClose');
+    var backdrop = document.getElementById('sphereMobileBackdrop');
+    var html = document.documentElement;
+    var mql = window.matchMedia('(max-width: 767.98px)');
+
+    function isOpen() {
+      return html.classList.contains('sphere-mobile-nav-open');
+    }
+
+    function setOpen(open) {
+      html.classList.toggle('sphere-mobile-nav-open', open);
+      if (mobileToggle) {
+        mobileToggle.classList.toggle('is-active', open);
+        mobileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    if (mobileToggle) {
+      mobileToggle.addEventListener('click', function () {
+        setOpen(!isOpen());
+      });
+    }
+
+    if (mobileClose) {
+      mobileClose.addEventListener('click', function () { setOpen(false); });
+    }
+
+    if (backdrop) {
+      backdrop.addEventListener('click', function () { setOpen(false); });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && isOpen()) { setOpen(false); }
+    });
+
+    // Close automatically if the viewport is resized past mobile width.
+    mql.addEventListener('change', function (e) {
+      if (!e.matches) { setOpen(false); }
+    });
+
+    // Tapping a nav link closes the drawer instead of leaving it open
+    // behind the page that just loaded.
+    document.querySelectorAll('#sphereSidebarNav .nav-link').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (mql.matches) { setOpen(false); }
+      });
+    });
+  })();
+</script>
+{% endif %}
 {% block extra_js %}{% endblock %}
 </body>
 </html>
