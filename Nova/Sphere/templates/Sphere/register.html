@@ -6,11 +6,11 @@
     <div class="card sphere-card shadow-sm">
       <div class="card-body p-4">
         <div class="text-center mb-4">
-          <div class="sphere-stat-icon mx-auto mb-3" style="width:56px;height:56px;border-radius:16px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-          </div>
-          <h2 class="fw-bold mb-0">Create your account</h2>
-          <p class="text-muted small mb-0">Project Manager registration</p>
+          <img src="{% static 'images/nova_logo.webp' %}" alt="NovaSphere logo" class="mx-auto mb-3" style="width:56px;height:56px;border-radius:16px;object-fit:cover;display:block;">
+          <h2 class="fw-bold mb-0">
+            <span style="color: var(--sphere-primary);">Nova</span><span style="color: var(--sphere-accent);">Sphere</span>
+          </h2>
+          <p class="text-muted small mb-0">IT Project Management System</p>
         </div>
         <form method="post" novalidate>
           {% csrf_token %}

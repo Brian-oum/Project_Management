@@ -1,4 +1,5 @@
 {% extends 'Sphere/base.html' %}
+{% load static %}
 {% block title %}Login - Sphere{% endblock %}
 {% block content %}
 <div class="row justify-content-center mt-5">
@@ -6,10 +7,10 @@
     <div class="card sphere-card shadow-sm">
       <div class="card-body p-4">
         <div class="text-center mb-4">
-          <div class="sphere-stat-icon mx-auto mb-3" style="width:56px;height:56px;border-radius:16px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
-          </div>
-          <h2 class="fw-bold mb-0">Sphere</h2>
+          <img src="{% static 'images/nova_logo.webp' %}" alt="NovaSphere logo" class="mx-auto mb-3" style="width:56px;height:56px;border-radius:16px;object-fit:cover;display:block;">
+          <h2 class="fw-bold mb-0">
+            <span style="color: var(--sphere-primary);">Nova</span><span style="color: var(--sphere-accent);">Sphere</span>
+          </h2>
           <p class="text-muted small mb-0">IT Project Management System</p>
         </div>
         {% if form.non_field_errors %}
